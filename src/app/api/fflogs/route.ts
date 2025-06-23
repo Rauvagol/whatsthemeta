@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { chromium } from 'playwright';
+import puppeteer from 'puppeteer';
 
 const GROUPS: Record<string, string[]> = {
   melee: ['viper', 'monk', 'dragoon', 'samurai', 'ninja'],
@@ -44,16 +44,18 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid zone ID. Only zones 65 and 68 are supported.' }, { status: 400 });
   }
 
-  // Use Playwright to scrape the data
+  // Use Puppeteer to scrape the data
   const url = zoneId === 68
     ? `https://www.fflogs.com/zone/statistics/68?class=Any&dataset=50${boss ? `&boss=${boss}` : ''}`
     : `https://www.fflogs.com/zone/statistics/65?class=Any&dataset=50${boss ? `&boss=${boss}` : ''}`;
 
   let browser;
   try {
-    browser = await chromium.launch({ headless: true });
+    browser = await puppeteer.launch({
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    });
     const page = await browser.newPage();
-    await page.goto(url, { waitUntil: 'networkidle' });
+    await page.goto(url, { waitUntil: 'networkidle2' });
 
     // Wait for the main statistics table to appear
     await page.waitForSelector('table');
