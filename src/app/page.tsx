@@ -53,7 +53,7 @@ function isColorLight(hex: string) {
   const b = parseInt(hex.substring(4, 6), 16);
   // Calculate luminance
   const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-  return luminance > 0.7;
+  return luminance > 0.2;
 }
 
 // Pie chart component for a group with tooltip

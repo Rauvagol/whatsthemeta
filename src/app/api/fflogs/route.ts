@@ -29,6 +29,8 @@ function groupJobs(jobs: { job: string; score: string; count: string }[]) {
   return result;
 }
 
+export const runtime = 'nodejs';
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const zone = searchParams.get('zone');
@@ -53,6 +55,7 @@ export async function GET(request: NextRequest) {
   try {
     browser = await puppeteer.launch({
       args: ['--no-sandbox', '--disable-setuid-sandbox'],
+      headless: "new",
     });
     const page = await browser.newPage();
     await page.goto(url, { waitUntil: 'networkidle2' });
