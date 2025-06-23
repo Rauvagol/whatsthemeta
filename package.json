@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "postinstall": "playwright install --with-deps"
+    "postinstall": "playwright install chromium"
   },
   "dependencies": {
     "cheerio": "^1.1.0",
