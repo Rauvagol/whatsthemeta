@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
   try {
     browser = await puppeteer.launch({
       args: ['--no-sandbox', '--disable-setuid-sandbox'],
-      headless: "new",
+      headless: true,
     });
     const page = await browser.newPage();
     await page.goto(url, { waitUntil: 'networkidle2' });
