@@ -291,7 +291,10 @@ export default function Home() {
               // Find the best job in this group
               let bestJob = jobs[0];
               let bestValue = 0;
-              if (isBossPage) {
+              if (jobs.length === 0) {
+                bestJob = { job: '', score: '0', count: '0' };
+                bestValue = 0;
+              } else if (isBossPage) {
                 bestJob = jobs.reduce((a, b) => (parseInt(a.score.replace(/,/g, '')) > parseInt(b.score.replace(/,/g, '')) ? a : b));
                 bestValue = parseInt(bestJob.score.replace(/,/g, ''));
               } else {

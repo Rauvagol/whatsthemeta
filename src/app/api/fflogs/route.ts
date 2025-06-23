@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import puppeteer from 'puppeteer';
+import { chromium } from 'playwright-core';
 
 const GROUPS: Record<string, string[]> = {
   melee: ['viper', 'monk', 'dragoon', 'samurai', 'ninja'],
@@ -46,22 +46,39 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid zone ID. Only zones 65 and 68 are supported.' }, { status: 400 });
   }
 
-  // Use Puppeteer to scrape the data
+  // Use Playwright to scrape the data
   const url = zoneId === 68
     ? `https://www.fflogs.com/zone/statistics/68?class=Any&dataset=50${boss ? `&boss=${boss}` : ''}`
     : `https://www.fflogs.com/zone/statistics/65?class=Any&dataset=50${boss ? `&boss=${boss}` : ''}`;
 
   let browser;
+  let page;
   try {
-    browser = await puppeteer.launch({
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    console.log('Launching browser...');
+    browser = await chromium.launch({
       headless: true,
     });
-    const page = await browser.newPage();
-    await page.goto(url, { waitUntil: 'networkidle2' });
+    console.log('Browser launched successfully');
+    
+    page = await browser.newPage();
+    console.log('Page created successfully');
+    
+    // Set a reasonable timeout for navigation
+    page.setDefaultTimeout(20000);
+    
+    console.log('Navigating to:', url);
+    await page.goto(url, { 
+      waitUntil: 'domcontentloaded'
+    });
+    console.log('Navigation completed');
 
-    // Wait for the main statistics table to appear
-    await page.waitForSelector('table');
+    // Wait for the main statistics table to appear with a shorter timeout
+    await page.waitForSelector('table', { timeout: 10000 });
+    console.log('Table found');
+
+    // Wait an additional 5 seconds to ensure all data is loaded
+    await new Promise(res => setTimeout(res, 1000));
+    console.log('Waited 5 seconds after table found');
 
     // Extract the data from the table rows
     const jobs = await page.evaluate(() => {
@@ -93,10 +110,10 @@ export async function GET(request: NextRequest) {
       }) || '';
     }
 
-    await browser.close();
     // Fix: filter out nulls and assert type
     const filteredJobs = (jobs as Array<{ job: string; score: string; count: string }>).filter(j => j && j.job);
     const groups = groupJobs(filteredJobs);
+    
     return NextResponse.json({
       zone: zoneId,
       zoneName,
@@ -105,11 +122,26 @@ export async function GET(request: NextRequest) {
       groups,
     });
   } catch (error) {
-    if (browser) await browser.close();
     console.error('Error scraping FFLogs data:', error);
     return NextResponse.json(
       { error: 'Failed to scrape FFLogs data', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
+  } finally {
+    // Always close browser and page in finally block
+    if (page) {
+      try {
+        await page.close();
+      } catch (e) {
+        console.error('Error closing page:', e);
+      }
+    }
+    if (browser) {
+      try {
+        await browser.close();
+      } catch (e) {
+        console.error('Error closing browser:', e);
+      }
+    }
   }
 } 

@@ -9,8 +9,9 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@playwright/browser-chromium": "^1.53.1",
     "next": "15.3.4",
-    "puppeteer": "^24.10.2",
+    "playwright-core": "^1.53.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
