@@ -157,8 +157,10 @@ export default function Home() {
       if (!response.ok) throw new Error('Failed to fetch data');
       const data = await response.json();
       setFflogsData(data);
-    } catch (err: any) {
-      setError(err.message || 'An error occurred');
+    } catch (err: unknown) {
+      setError(typeof err === 'object' && err !== null && 'message' in err 
+        ? String(err.message)
+        : 'An error occurred');
     } finally {
       setLoading(false);
     }
@@ -209,9 +211,9 @@ export default function Home() {
             <h1
               className="text-xl font-semibold text-gray-900 dark:text-white relative group cursor-pointer"
             >
-              What's the Meta?
+              What&apos;s the Meta?
               <span className="absolute left-1/2 -translate-x-1/2 mt-2 px-3 py-1 rounded bg-zinc-900 text-white text-xs border border-gray-700 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity z-50 whitespace-nowrap">
-                Nothing, what's the meta with you?
+                Nothing, what&apos;s the meta with you?
               </span>
             </h1>
             <div className="flex space-x-4 relative min-h-[48px] items-center">
@@ -286,8 +288,6 @@ export default function Home() {
               {fflogsData.zoneName || getZoneName(fflogsData.zone)}
             </h2>
             {Object.entries(fflogsData.groups).map(([group, jobs]) => {
-              // Calculate total count for this group
-              const totalCount = jobs.reduce((sum, job) => sum + (parseInt(job.count.replace(/,/g, '')) || 0), 0);
               // Find the best job in this group
               let bestJob = jobs[0];
               let bestValue = 0;
