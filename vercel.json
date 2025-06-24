@@ -1,11 +1,4 @@
 {
-  "functions": {
-    "api/fflogs.js": {
-      "maxDuration": 30,
-      "memory": 1024,
-      "includeFiles": "node_modules/@sparticuz/chromium/bin/**"
-    }
-  },
   "env": {
     "PLAYWRIGHT_BROWSERS_PATH": "0"
   }
