@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { chromium } from 'playwright-core';
+import chromium from '@sparticuz/chromium';
+import { chromium as playwrightChromium } from 'playwright-core';
 
 const GROUPS: Record<string, string[]> = {
   melee: ['viper', 'monk', 'dragoon', 'samurai', 'ninja'],
@@ -55,7 +56,10 @@ export async function GET(request: NextRequest) {
   let page;
   try {
     console.log('Launching browser...');
-    browser = await chromium.launch({
+    const executablePath = await chromium.executablePath();
+    browser = await playwrightChromium.launch({
+      args: chromium.args,
+      executablePath,
       headless: true,
     });
     console.log('Browser launched successfully');
@@ -76,9 +80,9 @@ export async function GET(request: NextRequest) {
     await page.waitForSelector('table', { timeout: 10000 });
     console.log('Table found');
 
-    // Wait an additional 5 seconds to ensure all data is loaded
+    // Wait an additional 1 second to ensure all data is loaded
     await new Promise(res => setTimeout(res, 1000));
-    console.log('Waited 5 seconds after table found');
+    console.log('Waited 1 second after table found');
 
     // Extract the data from the table rows
     const jobs = await page.evaluate(() => {
