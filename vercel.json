@@ -3,9 +3,7 @@
     "api/fflogs.js": {
       "maxDuration": 30,
       "memory": 1024,
-      "includeFiles": [
-        "node_modules/@sparticuz/chromium/bin/**"
-      ]
+      "includeFiles": "node_modules/@sparticuz/chromium/bin/**"
     }
   },
   "env": {
