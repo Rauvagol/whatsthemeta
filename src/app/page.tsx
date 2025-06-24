@@ -266,8 +266,8 @@ export default function Home() {
   const [fflogsData, setFflogsData] = useState<FFLogsGroupData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [activeZone, setActiveZone] = useState<number | null>(null);
-  const [savageExpanded, setSavageExpanded] = useState(false);
+  const [activeZone, setActiveZone] = useState<number | null>(1);
+  const [savageExpanded, setSavageExpanded] = useState(true);
   // Tooltip: hovered group and job index
   const [hoveredBar, setHoveredBar] = useState<{ group: string; idx: number } | null>(null);
   const [, setLastApiUrl] = useState<string | null>(null);
@@ -410,6 +410,13 @@ export default function Home() {
         .catch(() => setAllApiData(null));
     }
   }, [fflogsData, loading, error]);
+
+  React.useEffect(() => {
+    if (activeZone === savageId && !fflogsData && !loading && !error) {
+      fetchFFLogsData(savageId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Add a flag to hide the damage check feature for phase pages
   const isPhasePage = activeZone && [phase1Id, phase2Id, phase3Id, phase4Id, phase5Id].includes(activeZone);
