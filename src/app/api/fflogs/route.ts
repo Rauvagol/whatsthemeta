@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import chromium from '@sparticuz/chromium';
-import { chromium as playwrightChromium } from 'playwright-core';
+import { createClient } from '@supabase/supabase-js';
 
 const GROUPS: Record<string, string[]> = {
   melee: ['viper', 'monk', 'dragoon', 'samurai', 'ninja'],
@@ -10,8 +9,8 @@ const GROUPS: Record<string, string[]> = {
   healer: ['astrologian', 'scholar', 'white mage', 'sage'],
 };
 
-function groupJobs(jobs: { job: string; score: string; count: string }[]) {
-  const result: Record<string, typeof jobs> = {
+function groupJobs(jobs: { jobName: string; score: string; count: string }[]) {
+  const result: Record<string, { job: string; score: string; count: string }[]> = {
     melee: [],
     caster: [],
     ranged: [],
@@ -19,10 +18,14 @@ function groupJobs(jobs: { job: string; score: string; count: string }[]) {
     healer: [],
   };
   for (const job of jobs) {
-    const jobName = job.job.trim().toLowerCase();
+    const jobName = job.jobName.trim().toLowerCase();
     for (const [group, names] of Object.entries(GROUPS)) {
       if (names.includes(jobName)) {
-        result[group].push(job);
+        result[group].push({
+          job: job.jobName,
+          score: job.score,
+          count: job.count,
+        });
         break;
       }
     }
@@ -30,122 +33,47 @@ function groupJobs(jobs: { job: string; score: string; count: string }[]) {
   return result;
 }
 
-export const runtime = 'nodejs';
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
-  const zone = searchParams.get('zone');
-  const boss = searchParams.get('boss');
+  const id = searchParams.get('id');
 
-  if (!zone) {
-    return NextResponse.json({ error: 'Zone parameter is required' }, { status: 400 });
+  if (!id) {
+    // No id param: return the whole table
+    const { data, error } = await supabase.from('api_data').select('*');
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+    return NextResponse.json(data);
   }
 
-  const zoneId = parseInt(zone);
-  
-  if (![65, 68].includes(zoneId)) {
-    return NextResponse.json({ error: 'Invalid zone ID. Only zones 65 and 68 are supported.' }, { status: 400 });
+  const { data, error } = await supabase
+    .from('api_data')
+    .select('data')
+    .eq('id', Number(id))
+    .single();
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+  if (!data) {
+    return NextResponse.json({ error: 'No data found' }, { status: 404 });
   }
 
-  // Use Playwright to scrape the data
-  const url = zoneId === 68
-    ? `https://www.fflogs.com/zone/statistics/68?class=Any&dataset=50${boss ? `&boss=${boss}` : ''}`
-    : `https://www.fflogs.com/zone/statistics/65?class=Any&dataset=50${boss ? `&boss=${boss}` : ''}`;
+  // Parse the data field
+  const parsed = typeof data.data === 'string' ? JSON.parse(data.data) : data.data;
+  const jobs = parsed.data?.tableRows || [];
+  const groups = groupJobs(jobs);
 
-  let browser;
-  let page;
-  try {
-    console.log('Launching browser...');
-    const executablePath = await chromium.executablePath();
-    browser = await playwrightChromium.launch({
-      args: chromium.args,
-      executablePath,
-      headless: true,
-    });
-    console.log('Browser launched successfully');
-    
-    page = await browser.newPage();
-    console.log('Page created successfully');
-    
-    // Set a reasonable timeout for navigation
-    page.setDefaultTimeout(20000);
-    
-    console.log('Navigating to:', url);
-    await page.goto(url, { 
-      waitUntil: 'domcontentloaded'
-    });
-    console.log('Navigation completed');
-
-    // Wait for the main statistics table to appear with a shorter timeout
-    await page.waitForSelector('table', { timeout: 10000 });
-    console.log('Table found');
-
-    // Wait an additional 1 second to ensure all data is loaded
-    await new Promise(res => setTimeout(res, 1000));
-    console.log('Waited 1 second after table found');
-
-    // Extract the data from the table rows
-    const jobs = await page.evaluate(() => {
-      // Find all rows with a class (odd/even)
-      const rows = Array.from(document.querySelectorAll('tr.odd, tr.even'));
-      return rows.map(row => {
-        const cells = row.querySelectorAll('td');
-        if (cells.length < 4) return null;
-        return {
-          job: cells[0].textContent?.trim() || '',
-          score: cells[1].textContent?.trim() || '',
-          count: cells[3].textContent?.trim() || '',
-        };
-      }).filter(Boolean);
-    });
-
-    // Extract the boss name if boss is specified, otherwise use the zone name
-    let zoneName = '';
-    if (boss) {
-      zoneName = await page.evaluate(() => {
-        const el = document.querySelector('#filter-boss-text');
-        return el && el.textContent ? el.textContent.trim() : '';
-      }) || '';
-    }
-    if (!zoneName) {
-      zoneName = await page.evaluate(() => {
-        const el = document.querySelector('a.zone-name');
-        return el && el.textContent ? el.textContent.trim() : '';
-      }) || '';
-    }
-
-    // Fix: filter out nulls and assert type
-    const filteredJobs = (jobs as Array<{ job: string; score: string; count: string }>).filter(j => j && j.job);
-    const groups = groupJobs(filteredJobs);
-    
-    return NextResponse.json({
-      zone: zoneId,
-      zoneName,
-      url,
-      timestamp: new Date().toISOString(),
-      groups,
-    });
-  } catch (error) {
-    console.error('Error scraping FFLogs data:', error);
-    return NextResponse.json(
-      { error: 'Failed to scrape FFLogs data', details: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
-    );
-  } finally {
-    // Always close browser and page in finally block
-    if (page) {
-      try {
-        await page.close();
-      } catch (e) {
-        console.error('Error closing page:', e);
-      }
-    }
-    if (browser) {
-      try {
-        await browser.close();
-      } catch (e) {
-        console.error('Error closing browser:', e);
-      }
-    }
-  }
+  return NextResponse.json({
+    zoneName: parsed.data?.zoneName || '',
+    bossName: parsed.data?.bossName || '',
+    id: Number(id),
+    timestamp: parsed.data?.timestamp || '',
+    groups,
+  });
 } 

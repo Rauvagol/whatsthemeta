@@ -9,9 +9,8 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@sparticuz/chromium": "^137.0.1",
+    "@supabase/supabase-js": "^2.50.1",
     "next": "15.3.4",
-    "playwright-core": "^1.53.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
