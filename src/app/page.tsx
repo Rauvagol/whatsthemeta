@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import React from 'react';
+import Image from 'next/image';
 
 interface FFLogsGroupData {
   zone: number;
@@ -184,7 +185,7 @@ function RoleIconSelector({ role, jobs, selected, max, onSelect, className = '' 
                 style={{ width: 58, height: 58 }}
                 tabIndex={isDisabled(job) ? -1 : 0}
               >
-                <img
+                <Image
                   src={getIconPath(job.job)}
                   alt={job.job}
                   width={56}
@@ -209,7 +210,7 @@ function RoleIconSelector({ role, jobs, selected, max, onSelect, className = '' 
                 style={{ width: 58, height: 58 }}
                 tabIndex={isDisabled(job) ? -1 : 0}
               >
-                <img
+                <Image
                   src={getIconPath(job.job)}
                   alt={job.job}
                   width={56}
@@ -242,7 +243,7 @@ function RoleIconSelector({ role, jobs, selected, max, onSelect, className = '' 
                 style={{ width: 58, height: 58, ...(triangleStyle as React.CSSProperties) }}
                 tabIndex={isDisabled(job) ? -1 : 0}
               >
-                <img
+                <Image
                   src={getIconPath(job.job)}
                   alt={job.job}
                   width={56}
@@ -259,6 +260,8 @@ function RoleIconSelector({ role, jobs, selected, max, onSelect, className = '' 
   );
 }
 
+const SHOW_DEV_JSON = false;
+
 export default function Home() {
   const [fflogsData, setFflogsData] = useState<FFLogsGroupData | null>(null);
   const [loading, setLoading] = useState(false);
@@ -267,9 +270,9 @@ export default function Home() {
   const [savageExpanded, setSavageExpanded] = useState(false);
   // Tooltip: hovered group and job index
   const [hoveredBar, setHoveredBar] = useState<{ group: string; idx: number } | null>(null);
-  const [lastApiUrl, setLastApiUrl] = useState<string | null>(null);
-  const [rawApiResponse, setRawApiResponse] = useState<string | null>(null);
-  const [allApiData, setAllApiData] = useState<any[] | null>(null);
+  const [, setLastApiUrl] = useState<string | null>(null);
+  const [, setRawApiResponse] = useState<string | null>(null);
+  const [, setAllApiData] = useState<string[] | null>(null);
 
   // Damage check feature state
   const [partyComposition, setPartyComposition] = useState({
@@ -321,7 +324,7 @@ export default function Home() {
     
     selectedJobs.forEach(jobName => {
       // Find the job in the groups
-      for (const [group, jobs] of Object.entries(fflogsData.groups)) {
+      for (const [, jobs] of Object.entries(fflogsData.groups)) {
         const job = jobs.find(j => j.job === jobName);
         if (job) {
           const damage = parseInt(job.score.replace(/,/g, '')) || 0;
@@ -351,14 +354,14 @@ export default function Home() {
       let data;
       try {
         data = JSON.parse(text);
-      } catch (e) {
+      } catch {
         setError('API did not return valid JSON.');
         return;
       }
       setFflogsData(data);
     } catch (err: unknown) {
       setError(typeof err === 'object' && err !== null && 'message' in err 
-        ? String((err as any).message)
+        ? String((err as unknown as { message: string }).message)
         : 'An error occurred');
     } finally {
       setLoading(false);
@@ -504,8 +507,8 @@ export default function Home() {
         {fflogsData && !loading && (
           <div>
             <h2 className="text-2xl font-bold mb-6 text-center text-gray-900 dark:text-white">
-              {activeZone && [boss1Id, boss2Id, boss3Id, boss4Id].includes(activeZone) && fflogsData.bossName 
-                ? fflogsData.bossName 
+              {activeZone && [boss1Id, boss2Id, boss3Id, boss4Id, phase1Id, phase2Id, phase3Id, phase4Id, phase5Id].includes(activeZone) && fflogsData.bossName
+                ? fflogsData.bossName.replace(/^.*?:\s*/, '')
                 : fflogsData.zoneName || getZoneName(fflogsData.zone)}
             </h2>
             {Object.entries(fflogsData.groups).map(([group, jobs]) => {
@@ -754,6 +757,31 @@ export default function Home() {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Add back the dev debug output at the bottom of the page */}
+      {SHOW_DEV_JSON && (fflogsData || error) && (
+        <div className="mt-8 p-4 bg-gray-900 text-gray-100 rounded border border-gray-700">
+          <div className="font-bold mb-2">(dev) API Response:</div>
+          {error && (
+            <div className="mb-2 text-red-400">Error: {error}</div>
+          )}
+          {fflogsData && typeof fflogsData === 'object' && (!('groups' in fflogsData) || !('zoneName' in fflogsData)) && (
+            <div className="mb-2 text-yellow-400">Warning: API response does not match expected FFLogsGroupData structure.</div>
+          )}
+          <details open>
+            <summary className="cursor-pointer">Parsed JSON</summary>
+            <pre className="overflow-x-auto whitespace-pre-wrap text-xs">
+              {(() => {
+                try {
+                  return JSON.stringify(fflogsData || error, null, 2);
+                } catch {
+                  return String(fflogsData || error);
+                }
+              })()}
+            </pre>
+          </details>
         </div>
       )}
     </div>
