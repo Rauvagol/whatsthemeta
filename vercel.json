@@ -4,6 +4,9 @@
       "maxDuration": 30
     }
   },
+  "includeFiles": [
+    "node_modules/@sparticuz/chromium/bin/**"
+  ],
   "env": {
     "PLAYWRIGHT_BROWSERS_PATH": "0"
   }
