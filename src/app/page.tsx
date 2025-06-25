@@ -596,7 +596,8 @@ export default function Home() {
                           />
                           <p className="text-xs text-gray-100 leading-relaxed px-2 pb-2">
                             Note that this data is from Phase 5 of FRU, which has the most variance and the most stringent DPS check.<br />
-                            I don&apos;t think a difference of less than 350 DPS at most is worth the extra math. 
+                            I don&apos;t think a difference of less than 350 DPS at most is worth the extra math. <br />
+                            Also note that the average dps is below the median dps for all jobs except BLM and MCH.
                           </p>
                         </>
                       )}
