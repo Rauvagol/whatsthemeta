@@ -319,6 +319,9 @@ export default function Home() {
   // Add state for about dropdown
   const [aboutExpanded, setAboutExpanded] = useState(false);
   
+  // Add state for image modal
+  const [showImageModal, setShowImageModal] = useState(false);
+  
   // Add state for collapsible sections in about popup
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     howToUse: true,
@@ -588,7 +591,8 @@ export default function Home() {
                             alt="Median vs Mean comparison" 
                             width={400}
                             height={300}
-                            className="w-full rounded border border-gray-600 mb-2"
+                            className="w-full rounded border border-gray-600 mb-2 cursor-pointer hover:opacity-90 transition-opacity"
+                            onClick={() => setShowImageModal(true)}
                           />
                           <p className="text-xs text-gray-100 leading-relaxed px-2 pb-2">
                             Note that this data is from Phase 5 of FRU, which has the most variance and the most stringent DPS check.<br />
@@ -1237,6 +1241,31 @@ export default function Home() {
               })()}
             </pre>
           </details>
+        </div>
+      )}
+
+      {/* Image Modal */}
+      {showImageModal && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4"
+          onClick={() => setShowImageModal(false)}
+        >
+          <div className="relative max-w-full max-h-full">
+            <button
+              onClick={() => setShowImageModal(false)}
+              className="absolute top-4 right-4 text-white bg-black bg-opacity-50 rounded-full w-8 h-8 flex items-center justify-center hover:bg-opacity-75 transition-colors z-10"
+            >
+              ×
+            </button>
+            <Image 
+              src="/assets/medianvsmean.png" 
+              alt="Median vs Mean comparison (Full size)" 
+              width={800}
+              height={600}
+              className="max-w-full max-h-full object-contain rounded"
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>
         </div>
       )}
     </div>
