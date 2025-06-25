@@ -318,6 +318,24 @@ export default function Home() {
 
   // Add state for about dropdown
   const [aboutExpanded, setAboutExpanded] = useState(false);
+  
+  // Add state for collapsible sections in about popup
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
+    howToUse: true,
+    dataSource: false,
+    whyMedian: false,
+    whyNotMean: false,
+    whyName: false,
+    contact: false,
+  });
+
+  // Helper function to toggle section expansion
+  const toggleSection = (sectionKey: string) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [sectionKey]: !prev[sectionKey]
+    }));
+  };
 
   // Helper function to get damage requirement for each boss
   const getDamageRequirement = (bossId: number) => {
@@ -467,34 +485,165 @@ export default function Home() {
                 </button>
                 {/* About Dropdown */}
                 <div className={`absolute top-full left-0 mt-2 w-96 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 transition-all duration-200 ${aboutExpanded ? 'opacity-100 visible' : 'opacity-0 invisible'}`}>
-                  <div className="p-4 space-y-4">
+                  <div className="p-4 space-y-2">
+                    {/* How to Use */}
                     <div>
-                      <h3 className="text-sm font-semibold text-white mb-2">Data Source</h3>
-                      <p className="text-xs text-gray-300 leading-relaxed">
-                        All data comes from FFLogs and is based on median performance. This means 50% of players do more DPS than shown, and 50% do less. This percentile was chosen to be realistic expectations for average players.
-                      </p>
+                      <button
+                        onClick={() => toggleSection('howToUse')}
+                        className={`flex items-center justify-between w-full text-left text-sm font-semibold mb-2 transition-colors rounded-md px-3 py-2
+                          ${expandedSections.howToUse ? 'bg-[#46608A] text-white' : 'bg-[#384D6B] text-blue-100'}
+                          hover:bg-[#46608A] hover:text-white cursor-pointer shadow-sm`}
+                        style={{ outline: 'none', border: 'none' }}
+                      >
+                        <span>How to Use</span>
+                        <span className={`transition-transform duration-200 ${expandedSections.howToUse ? 'rotate-90' : ''}`}
+                          style={{ display: 'flex', alignItems: 'center' }}>
+                          <svg width="18" height="18" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M7 6L13 10L7 14V6Z" fill="currentColor" />
+                          </svg>
+                        </span>
+                      </button>
+                      {expandedSections.howToUse && (
+                        <p className="text-xs text-gray-100 leading-relaxed px-2 pb-2">
+                          Click Savage or Ultimate to see job performance data. Use the Party Composition tool to build your party and see how they could be expected to perform across all encounters. The damage requirements show what your party needs to meet each check.<br />
+                          Hover over job bars to see detailed comparisons, and use the pie charts to understand job popularity in the current meta.
+                        </p>
+                      )}
                     </div>
                     
+                    {/* Data Source */}
                     <div>
-                      <h3 className="text-sm font-semibold text-white mb-2">How to Use</h3>
-                      <p className="text-xs text-gray-300 leading-relaxed">
-                        Click Savage or Ultimate to see job performance data. Use the Party Composition tool to build your party and see how they could be expected to perform across all encounters. The damage requirements show what your party needs to meet each check.
-                      </p>
+                      <button
+                        onClick={() => toggleSection('dataSource')}
+                        className={`flex items-center justify-between w-full text-left text-sm font-semibold mb-2 transition-colors rounded-md px-3 py-2
+                          ${expandedSections.dataSource ? 'bg-[#46608A] text-white' : 'bg-[#384D6B] text-blue-100'}
+                          hover:bg-[#46608A] hover:text-white cursor-pointer shadow-sm`}
+                        style={{ outline: 'none', border: 'none' }}
+                      >
+                        <span>Data Source</span>
+                        <span className={`transition-transform duration-200 ${expandedSections.dataSource ? 'rotate-90' : ''}`}
+                          style={{ display: 'flex', alignItems: 'center' }}>
+                          <svg width="18" height="18" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M7 6L13 10L7 14V6Z" fill="currentColor" />
+                          </svg>
+                        </span>
+                      </button>
+                      {expandedSections.dataSource && (
+                        <p className="text-xs text-gray-100 leading-relaxed px-2 pb-2">
+                          All data comes from FFLogs and is based on median performance. This means 50% of players do more DPS than shown, and 50% do less. These are realistic expectations for average players.<br />
+                          The boss DPS requirement numbers were calculated by taking the boss&apos;s HP and dividing by the time you have to kill it. There is some variance due to instance speeds, and the requirement is rounded up to the nearest 1000 DPS.<br />
+                          This means it is possible to kill the boss with less than the listed requirement here, since it is just a tool and I cannot simulate Square Enix servers.
+                        </p>
+                      )}
                     </div>
                     
+                    {/* Why Median? */}
                     <div>
-                      <h3 className="text-sm font-semibold text-white mb-2">Why&apos;s &quot;What&apos;s the Meta?&quot;?</h3>
-                      <p className="text-xs text-gray-300 leading-relaxed">
-                        This site was made to show that party composition and class choice really don&apos;t matter as much as players think. Any class played at an average level is good enough for almost anything. Even in ultimates where you need to overperform, it&apos;s your performance that matters more than class choice.
-                      </p>
+                      <button
+                        onClick={() => toggleSection('whyMedian')}
+                        className={`flex items-center justify-between w-full text-left text-sm font-semibold mb-2 transition-colors rounded-md px-3 py-2
+                          ${expandedSections.whyMedian ? 'bg-[#46608A] text-white' : 'bg-[#384D6B] text-blue-100'}
+                          hover:bg-[#46608A] hover:text-white cursor-pointer shadow-sm`}
+                        style={{ outline: 'none', border: 'none' }}
+                      >
+                        <span>Why Median?</span>
+                        <span className={`transition-transform duration-200 ${expandedSections.whyMedian ? 'rotate-90' : ''}`}
+                          style={{ display: 'flex', alignItems: 'center' }}>
+                          <svg width="18" height="18" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M7 6L13 10L7 14V6Z" fill="currentColor" />
+                          </svg>
+                        </span>
+                      </button>
+                      {expandedSections.whyMedian && (
+                        <p className="text-xs text-gray-100 leading-relaxed px-2 pb-2">
+                          Median isn&apos;t exactly the &quot;average&quot; damage - it&apos;s the middle value where half of players perform better and half perform worse. While not a true average, it&apos;s close enough for most purposes and keeps the data collection lightweight for FFLogs.
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Why Not Mean? */}
+                    <div>
+                      <button
+                        onClick={() => toggleSection('whyNotMean')}
+                        className={`flex items-center justify-between w-full text-left text-sm font-semibold mb-2 transition-colors rounded-md px-3 py-2
+                          ${expandedSections.whyNotMean ? 'bg-[#46608A] text-white' : 'bg-[#384D6B] text-blue-100'}
+                          hover:bg-[#46608A] hover:text-white cursor-pointer shadow-sm`}
+                        style={{ outline: 'none', border: 'none' }}
+                      >
+                        <span>Why Not Mean?</span>
+                        <span className={`transition-transform duration-200 ${expandedSections.whyNotMean ? 'rotate-90' : ''}`}
+                          style={{ display: 'flex', alignItems: 'center' }}>
+                          <svg width="18" height="18" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M7 6L13 10L7 14V6Z" fill="currentColor" />
+                          </svg>
+                        </span>
+                      </button>
+                      {expandedSections.whyNotMean && (
+                        <>
+                          <p className="text-xs text-gray-100 leading-relaxed mb-2 px-2 pb-2">
+                            The image below shows the difference between a calculated estimated mean (using all percentiles) vs just using the simple median:
+                          </p>
+                          <Image 
+                            src="https://i.imgur.com/TPeQoUf.png" 
+                            alt="Median vs Mean comparison" 
+                            className="w-full rounded border border-gray-600 mb-2"
+                          />
+                          <p className="text-xs text-gray-100 leading-relaxed px-2 pb-2">
+                            Note that this data is from Phase 5 of FRU, which has the most variance and the most stringent DPS check.<br />
+                            I don&apos;t think a difference of less than 350 DPS at most is worth the extra math. 
+                          </p>
+                        </>
+                      )}
                     </div>
                     
+                    {/* Why "What's the Meta?" */}
                     <div>
-                      <h3 className="text-sm font-semibold text-white mb-2">Contact</h3>
-                      <p className="text-xs text-gray-300 leading-relaxed">
-                        Adam Rauvagol @ Jenova<br />
-                        EmailTheMeta@gmail.com
-                      </p>
+                      <button
+                        onClick={() => toggleSection('whyName')}
+                        className={`flex items-center justify-between w-full text-left text-sm font-semibold mb-2 transition-colors rounded-md px-3 py-2
+                          ${expandedSections.whyName ? 'bg-[#46608A] text-white' : 'bg-[#384D6B] text-blue-100'}
+                          hover:bg-[#46608A] hover:text-white cursor-pointer shadow-sm`}
+                        style={{ outline: 'none', border: 'none' }}
+                      >
+                        <span>Why&apos;s &quot;What&apos;s the Meta?&quot;?</span>
+                        <span className={`transition-transform duration-200 ${expandedSections.whyName ? 'rotate-90' : ''}`}
+                          style={{ display: 'flex', alignItems: 'center' }}>
+                          <svg width="18" height="18" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M7 6L13 10L7 14V6Z" fill="currentColor" />
+                          </svg>
+                        </span>
+                      </button>
+                      {expandedSections.whyName && (
+                        <p className="text-xs text-gray-100 leading-relaxed px-2 pb-2">
+                          This site was made to show that party composition and class choice really don&apos;t matter as much as players think. Any class played at an average level is good enough for almost anything. Even in ultimates where you need to overperform, it&apos;s your performance that matters more than class choice.<br />
+                          The name is a play on the common question &quot;What&apos;s the meta?&quot; - the answer is usually &quot;play what you enjoy and perform well with.&quot;
+                        </p>
+                      )}
+                    </div>
+                    
+                    {/* Contact */}
+                    <div>
+                      <button
+                        onClick={() => toggleSection('contact')}
+                        className={`flex items-center justify-between w-full text-left text-sm font-semibold mb-2 transition-colors rounded-md px-3 py-2
+                          ${expandedSections.contact ? 'bg-[#46608A] text-white' : 'bg-[#384D6B] text-blue-100'}
+                          hover:bg-[#46608A] hover:text-white cursor-pointer shadow-sm`}
+                        style={{ outline: 'none', border: 'none' }}
+                      >
+                        <span>Contact</span>
+                        <span className={`transition-transform duration-200 ${expandedSections.contact ? 'rotate-90' : ''}`}
+                          style={{ display: 'flex', alignItems: 'center' }}>
+                          <svg width="18" height="18" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M7 6L13 10L7 14V6Z" fill="currentColor" />
+                          </svg>
+                        </span>
+                      </button>
+                      {expandedSections.contact && (
+                        <p className="text-xs text-gray-100 leading-relaxed px-2 pb-2">
+                          Adam Rauvagol @ Jenova<br />
+                          EmailTheMeta@gmail.com
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -771,7 +920,6 @@ export default function Home() {
             Party Composition Analysis
           </h2>
 
-          {/* Party Builder Element */}
           <div className="bg-gray-800 rounded-lg border border-gray-700 p-6 mb-8">
             <div className="text-center mb-6">
               <h3 className="text-lg font-semibold text-gray-200 mb-2">Party Builder</h3>
@@ -971,7 +1119,7 @@ export default function Home() {
                             </div>
                           </div>
                           
-                          <div className="bg-gray-700 rounded p-3 flex-1 relative">
+                          <div className="bg-gray-700 rounded p-3 flex-1 flex-1 relative">
                             {(id === phase3Id && showPhase3Warning) || (id === phase5Id && showPhase5Warning) ? (
                               <div className="absolute inset-0 bg-black bg-opacity-75 rounded-lg flex items-center justify-center z-10">
                                 <div className="bg-gray-800 rounded-lg border border-gray-700 p-4 mx-4 max-w-sm">
