@@ -584,8 +584,10 @@ export default function Home() {
                             The image below shows the difference between a calculated estimated mean (using all percentiles) vs just using the simple median:
                           </p>
                           <Image 
-                            src="https://i.imgur.com/TPeQoUf.png" 
+                            src="/assets/medianvsmean.png" 
                             alt="Median vs Mean comparison" 
+                            width={400}
+                            height={300}
                             className="w-full rounded border border-gray-600 mb-2"
                           />
                           <p className="text-xs text-gray-100 leading-relaxed px-2 pb-2">
