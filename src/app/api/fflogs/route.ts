@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
 const GROUPS: Record<string, string[]> = {
-  melee: ['viper', 'monk', 'dragoon', 'samurai', 'ninja'],
+  melee: ['viper', 'monk', 'dragoon', 'samurai', 'ninja', 'reaper'],
   caster: ['red mage', 'black mage', 'pictomancer', 'summoner'],
   ranged: ['dancer', 'machinist', 'bard'],
   tank: ['warrior', 'gunbreaker', 'dark knight', 'paladin'],

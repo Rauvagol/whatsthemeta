@@ -301,8 +301,23 @@ export default function Home() {
   const phase4Id = 10;
   const phase5Id = 11;
 
+  // Add new party composition page ID
+  const partyCompositionId = 12;
+
   // Add state for ultimateExpanded
   const [ultimateExpanded, setUltimateExpanded] = useState(false);
+  // Add state for party composition expanded
+  const [partyCompositionExpanded, setPartyCompositionExpanded] = useState(false);
+
+  // Add state for party composition data
+  const [partyCompositionData, setPartyCompositionData] = useState<Record<number, FFLogsGroupData | null>>({});
+
+  // Add state for warning notification
+  const [showPhase5Warning, setShowPhase5Warning] = useState(false);
+  const [showPhase3Warning, setShowPhase3Warning] = useState(false);
+
+  // Add state for about dropdown
+  const [aboutExpanded, setAboutExpanded] = useState(false);
 
   // Helper function to get damage requirement for each boss
   const getDamageRequirement = (bossId: number) => {
@@ -311,31 +326,36 @@ export default function Home() {
       case boss2Id: return 185000;
       case boss3Id: return 185000;
       case boss4Id: return 177000;
+      case phase1Id: return 140000;
+      case phase2Id: return 160000;
+      case phase3Id: return 170000;
+      case phase4Id: return 145000;
+      case phase5Id: return 185000;
       default: return 0;
     }
   };
 
   // Helper function to calculate total party damage
-  const calculatePartyDamage = () => {
-    if (!fflogsData) return 0;
+  // const calculatePartyDamage = () => {
+  //   if (!fflogsData) return 0;
     
-    let totalDamage = 0;
-    const selectedJobs = Object.values(partyComposition).filter(job => job !== '');
+  //   let totalDamage = 0;
+  //   const selectedJobs = Object.values(partyComposition).filter(job => job !== '');
     
-    selectedJobs.forEach(jobName => {
-      // Find the job in the groups
-      for (const [, jobs] of Object.entries(fflogsData.groups)) {
-        const job = jobs.find(j => j.job === jobName);
-        if (job) {
-          const damage = parseInt(job.score.replace(/,/g, '')) || 0;
-          totalDamage += damage;
-          break;
-        }
-      }
-    });
+  //   selectedJobs.forEach(jobName => {
+  //     // Find the job in the groups
+  //     for (const [, jobs] of Object.entries(fflogsData.groups)) {
+  //       const job = jobs.find(j => j.job === jobName);
+  //       if (job) {
+  //         const damage = parseInt(job.score.replace(/,/g, '')) || 0;
+  //         totalDamage += damage;
+  //         break;
+  //       }
+  //     }
+  //   });
     
-    return totalDamage;
-  };
+  //   return totalDamage;
+  // };
 
   const fetchFFLogsData = async (id: number) => {
     setLoading(true);
@@ -380,7 +400,7 @@ export default function Home() {
   };
 
   // Boss button style
-  const bossBtnClass = "px-2 py-1 text-sm bg-blue-500 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors";
+  // const bossBtnClass = "px-2 py-1 text-sm bg-blue-500 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors";
 
   // If boss page or phase page, find the max score across all jobs in all groups
   let maxBossScore = 100;
@@ -419,84 +439,200 @@ export default function Home() {
   }, []);
 
   // Add a flag to hide the damage check feature for phase pages
-  const isPhasePage = activeZone && [phase1Id, phase2Id, phase3Id, phase4Id, phase5Id].includes(activeZone);
+  // const isPhasePage = activeZone && [phase1Id, phase2Id, phase3Id, phase4Id, phase5Id].includes(activeZone);
 
   return (
     <div className="min-h-screen bg-zinc-900">
       {/* Header with buttons */}
-      <header className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
+      <header className="bg-gray-800 shadow-sm border-b border-gray-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <h1
-              className="text-xl font-semibold text-gray-900 dark:text-white relative group cursor-pointer"
-            >
-              What&apos;s the Meta?
-              <span className="absolute left-1/2 -translate-x-1/2 mt-2 px-3 py-1 rounded bg-zinc-900 text-white text-xs border border-gray-700 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity z-50 whitespace-nowrap">
-                Nothing, what&apos;s the meta with you?
-              </span>
-            </h1>
-            <div className="flex space-x-4 relative min-h-[48px] items-center">
-              {/* Savage Button */}
-              <button
-                onClick={() => {
-                  fetchFFLogsData(savageId);
-                  if (!savageExpanded) setSavageExpanded(true);
-                  if (ultimateExpanded) setUltimateExpanded(false);
-                }}
-                disabled={loading}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300"
-                style={{ zIndex: 2 }}
+            <div className="flex items-center space-x-4">
+              <h1
+                className="text-xl font-semibold text-white relative group cursor-pointer"
               >
-                {loading && activeZone === savageId ? 'Loading...' : 'Savage'}
-              </button>
-              {/* Boss Buttons Slide In Between */}
-              <div className={`flex flex-row space-x-1 transition-all duration-300 ${savageExpanded ? 'opacity-100 max-w-[500px]' : 'opacity-0 max-w-0'} overflow-hidden`} style={{ marginLeft: savageExpanded ? '4px' : '0', marginRight: savageExpanded ? '16px' : '0' }}>
+                What&apos;s the Meta?
+                <span className="absolute left-1/2 -translate-x-1/2 mt-2 px-3 py-1 rounded bg-zinc-900 text-white text-xs border border-gray-700 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity z-50 whitespace-nowrap">
+                  Nothing, what&apos;s the meta with you?
+                </span>
+              </h1>
+              
+              {/* About Button */}
+              <div className="relative">
                 <button
-                  onClick={() => fetchFFLogsData(boss1Id)}
-                  disabled={loading}
-                  className={bossBtnClass}
-                >Boss 1</button>
-                <button
-                  onClick={() => fetchFFLogsData(boss2Id)}
-                  disabled={loading}
-                  className={bossBtnClass}
-                >Boss 2</button>
-                <button
-                  onClick={() => fetchFFLogsData(boss3Id)}
-                  disabled={loading}
-                  className={bossBtnClass}
-                >Boss 3</button>
-                <button
-                  onClick={() => fetchFFLogsData(boss4Id)}
-                  disabled={loading}
-                  className={bossBtnClass}
-                >Boss 4</button>
+                  onClick={() => setAboutExpanded(!aboutExpanded)}
+                  className="text-gray-300 hover:text-white text-sm px-2 py-1 rounded transition-colors"
+                >
+                  About
+                </button>
+                {/* About Dropdown */}
+                <div className={`absolute top-full left-0 mt-2 w-96 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 transition-all duration-200 ${aboutExpanded ? 'opacity-100 visible' : 'opacity-0 invisible'}`}>
+                  <div className="p-4 space-y-4">
+                    <div>
+                      <h3 className="text-sm font-semibold text-white mb-2">Data Source</h3>
+                      <p className="text-xs text-gray-300 leading-relaxed">
+                        All data comes from FFLogs and is based on median performance. This means 50% of players do more DPS than shown, and 50% do less. This percentile was chosen to be realistic expectations for average players.
+                      </p>
+                    </div>
+                    
+                    <div>
+                      <h3 className="text-sm font-semibold text-white mb-2">How to Use</h3>
+                      <p className="text-xs text-gray-300 leading-relaxed">
+                        Click Savage or Ultimate to see job performance data. Use the Party Composition tool to build your party and see how they could be expected to perform across all encounters. The damage requirements show what your party needs to meet each check.
+                      </p>
+                    </div>
+                    
+                    <div>
+                      <h3 className="text-sm font-semibold text-white mb-2">Why&apos;s &quot;What&apos;s the Meta?&quot;?</h3>
+                      <p className="text-xs text-gray-300 leading-relaxed">
+                        This site was made to show that party composition and class choice really don&apos;t matter as much as players think. Any class played at an average level is good enough for almost anything. Even in ultimates where you need to overperform, it&apos;s your performance that matters more than class choice.
+                      </p>
+                    </div>
+                    
+                    <div>
+                      <h3 className="text-sm font-semibold text-white mb-2">Contact</h3>
+                      <p className="text-xs text-gray-300 leading-relaxed">
+                        Adam Rauvagol @ Jenova<br />
+                        EmailTheMeta@gmail.com
+                      </p>
+                    </div>
+                  </div>
+                </div>
               </div>
-              {/* Ultimate Button */}
-              <button
-                onClick={() => {
-                  fetchFFLogsData(ultimateId);
-                  if (!ultimateExpanded) setUltimateExpanded(true);
-                  if (savageExpanded) setSavageExpanded(false);
-                }}
-                disabled={loading}
-                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                style={{ zIndex: 2 }}
-              >
-                {loading && activeZone === ultimateId ? 'Loading...' : 'Ultimate'}
-              </button>
-              {/* Phase Selector */}
-              <div className={`flex flex-row space-x-1 transition-all duration-300 ${ultimateExpanded ? 'opacity-100 max-w-[500px]' : 'opacity-0 max-w-0'} overflow-hidden`} style={{ marginLeft: ultimateExpanded ? '4px' : '0', marginRight: ultimateExpanded ? '16px' : '0' }}>
-                <button onClick={() => fetchFFLogsData(phase1Id)} disabled={loading} className="px-2 py-1 text-sm bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">Phase 1</button>
-                <button onClick={() => fetchFFLogsData(phase2Id)} disabled={loading} className="px-2 py-1 text-sm bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">Phase 2</button>
-                <button onClick={() => fetchFFLogsData(phase3Id)} disabled={loading} className="px-2 py-1 text-sm bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">Phase 3</button>
-                <button onClick={() => fetchFFLogsData(phase4Id)} disabled={loading} className="px-2 py-1 text-sm bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">Phase 4</button>
-                <button onClick={() => fetchFFLogsData(phase5Id)} disabled={loading} className="px-2 py-1 text-sm bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">Phase 5</button>
+            </div>
+            
+            <div className="flex space-x-4 relative min-h-[48px] items-center">
+              {/* Savage Button and Boss Buttons */}
+              <div className="relative">
+                <button
+                  onClick={() => {
+                    fetchFFLogsData(savageId);
+                    if (!savageExpanded) setSavageExpanded(true);
+                    if (ultimateExpanded) setUltimateExpanded(false);
+                    if (aboutExpanded) setAboutExpanded(false);
+                  }}
+                  disabled={loading}
+                  className={`px-4 py-2 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 ${
+                    activeZone === savageId ? 'bg-blue-700 ring-2 ring-blue-400 ring-offset-2 ring-offset-gray-800' : 'bg-blue-600'
+                  }`}
+                  style={{ zIndex: 2 }}
+                >
+                  {loading && activeZone === savageId ? 'Loading...' : 'Savage'}
+                </button>
+                {/* Boss Buttons Drop Down */}
+                <div className={`absolute top-full left-1/2 transform -translate-x-1/2 flex flex-row space-x-1 transition-all duration-300 ${savageExpanded ? 'opacity-100 max-h-[48px]' : 'opacity-0 max-h-0'} overflow-hidden mt-2`}>
+                  <button
+                    onClick={() => fetchFFLogsData(boss1Id)}
+                    disabled={loading}
+                    className={`pt-0 pb-2 px-2 text-sm text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors border-4 ${
+                      activeZone === boss1Id ? 'bg-blue-700 border-blue-300' : 'bg-blue-500 border-transparent'
+                    }`}
+                  >Boss 1</button>
+                  <button
+                    onClick={() => fetchFFLogsData(boss2Id)}
+                    disabled={loading}
+                    className={`pt-0 pb-2 px-2 text-sm text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors border-4 ${
+                      activeZone === boss2Id ? 'bg-blue-700 border-blue-300' : 'bg-blue-500 border-transparent'
+                    }`}
+                  >Boss 2</button>
+                  <button
+                    onClick={() => fetchFFLogsData(boss3Id)}
+                    disabled={loading}
+                    className={`pt-0 pb-2 px-2 text-sm text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors border-4 ${
+                      activeZone === boss3Id ? 'bg-blue-700 border-blue-300' : 'bg-blue-500 border-transparent'
+                    }`}
+                  >Boss 3</button>
+                  <button
+                    onClick={() => fetchFFLogsData(boss4Id)}
+                    disabled={loading}
+                    className={`pt-0 pb-2 px-2 text-sm text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors border-4 ${
+                      activeZone === boss4Id ? 'bg-blue-700 border-blue-300' : 'bg-blue-500 border-transparent'
+                    }`}
+                  >Boss 4</button>
+                </div>
+              </div>
+              
+              {/* Ultimate Button and Phase Buttons */}
+              <div className="relative">
+                <button
+                  onClick={() => {
+                    fetchFFLogsData(ultimateId);
+                    if (!ultimateExpanded) setUltimateExpanded(true);
+                    if (savageExpanded) setSavageExpanded(false);
+                    if (partyCompositionExpanded) setPartyCompositionExpanded(false);
+                    if (aboutExpanded) setAboutExpanded(false);
+                  }}
+                  disabled={loading}
+                  className={`px-4 py-2 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors ${
+                    activeZone === ultimateId ? 'bg-green-700 ring-2 ring-green-400 ring-offset-2 ring-offset-gray-800' : 'bg-green-600'
+                  }`}
+                  style={{ zIndex: 2 }}
+                >
+                  {loading && activeZone === ultimateId ? 'Loading...' : 'Ultimate'}
+                </button>
+                {/* Phase Buttons Drop Down */}
+                <div className={`absolute top-full left-1/2 transform -translate-x-1/2 flex flex-row space-x-1 transition-all duration-300 ${ultimateExpanded ? 'opacity-100 max-h-[48px]' : 'opacity-0 max-h-0'} overflow-hidden mt-2`}>
+                  <button onClick={() => fetchFFLogsData(phase1Id)} disabled={loading} className={`pt-0 pb-2 px-2 text-sm text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors border-4 ${
+                    activeZone === phase1Id ? 'bg-green-700 border-green-300' : 'bg-green-600 border-transparent'
+                  }`}>Phase 1</button>
+                  <button onClick={() => fetchFFLogsData(phase2Id)} disabled={loading} className={`pt-0 pb-2 px-2 text-sm text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors border-4 ${
+                    activeZone === phase2Id ? 'bg-green-700 border-green-300' : 'bg-green-600 border-transparent'
+                  }`}>Phase 2</button>
+                  <button onClick={() => fetchFFLogsData(phase3Id)} disabled={loading} className={`pt-0 pb-2 px-2 text-sm text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors border-4 ${
+                    activeZone === phase3Id ? 'bg-green-700 border-green-300' : 'bg-green-600 border-transparent'
+                  }`}>Phase 3</button>
+                  <button onClick={() => fetchFFLogsData(phase4Id)} disabled={loading} className={`pt-0 pb-2 px-2 text-sm text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors border-4 ${
+                    activeZone === phase4Id ? 'bg-green-700 border-green-300' : 'bg-green-600 border-transparent'
+                  }`}>Phase 4</button>
+                  <button onClick={() => fetchFFLogsData(phase5Id)} disabled={loading} className={`pt-0 pb-2 px-2 text-sm text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors border-4 ${
+                    activeZone === phase5Id ? 'bg-green-700 border-green-300' : 'bg-green-600 border-transparent'
+                  }`}>Phase 5</button>
+                </div>
+              </div>
+
+              {/* Party Composition Button */}
+              <div className="relative">
+                <button
+                  onClick={() => {
+                    setActiveZone(partyCompositionId);
+                    if (!partyCompositionExpanded) setPartyCompositionExpanded(true);
+                    if (savageExpanded) setSavageExpanded(false);
+                    if (ultimateExpanded) setUltimateExpanded(false);
+                    if (aboutExpanded) setAboutExpanded(false);
+                    // Load all boss/phase data
+                    const allIds = [boss1Id, boss2Id, boss3Id, boss4Id, phase1Id, phase2Id, phase3Id, phase4Id, phase5Id];
+                    allIds.forEach(id => {
+                      fetch(`/api/fflogs?id=${id}`)
+                        .then(res => res.json())
+                        .then(data => {
+                          setPartyCompositionData(prev => ({ ...prev, [id]: data }));
+                        })
+                        .catch(() => {
+                          setPartyCompositionData(prev => ({ ...prev, [id]: null }));
+                        });
+                    });
+                  }}
+                  disabled={loading}
+                  className={`px-4 py-2 text-white rounded-md hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors ${
+                    activeZone === partyCompositionId ? 'bg-purple-700 ring-2 ring-purple-400 ring-offset-2 ring-offset-gray-800' : 'bg-purple-600'
+                  }`}
+                  style={{ zIndex: 2 }}
+                >
+                  {loading && activeZone === partyCompositionId ? 'Loading...' : 'Party Composition'}
+                </button>
               </div>
             </div>
           </div>
         </div>
       </header>
+
+      {/* Click outside to close about dropdown */}
+      {aboutExpanded && (
+        <div 
+          className="fixed inset-0 z-40" 
+          onClick={() => setAboutExpanded(false)}
+        />
+      )}
 
       {/* Main content */}
       <main className="mx-auto px-4 sm:px-6 lg:px-8 py-8" style={{ maxWidth: '57.6rem' }}>
@@ -511,9 +647,9 @@ export default function Home() {
             <span className="ml-3 text-gray-600 dark:text-gray-400">Loading data...</span>
           </div>
         )}
-        {fflogsData && !loading && (
+        {fflogsData && !loading && activeZone !== partyCompositionId && (
           <div>
-            <h2 className="text-2xl font-bold mb-6 text-center text-gray-900 dark:text-white">
+            <h2 className="text-2xl font-bold mb-6 text-center text-white">
               {activeZone && [boss1Id, boss2Id, boss3Id, boss4Id, phase1Id, phase2Id, phase3Id, phase4Id, phase5Id].includes(activeZone) && fflogsData.bossName
                 ? fflogsData.bossName.replace(/^.*?:\s*/, '')
                 : fflogsData.zoneName || getZoneName(fflogsData.zone)}
@@ -628,16 +764,19 @@ export default function Home() {
         )}
       </main>
 
-      {/* Damage Check Feature */}
-      {fflogsData && !loading && activeZone && [boss1Id, boss2Id, boss3Id, boss4Id].includes(activeZone) && !isPhasePage && (
-        <div className="mx-auto px-4 sm:px-6 lg:px-8 py-8" style={{ maxWidth: '57.6rem' }}>
-          <div className="bg-gray-800 rounded-lg border border-gray-700 p-6">
+      {/* Party Composition Page */}
+      {activeZone === partyCompositionId && (
+        <div style={{ maxWidth: '57.6rem', margin: '0 auto' }}>
+          <h2 className="text-2xl font-bold mb-6 text-center text-white">
+            Party Composition Analysis
+          </h2>
+
+          {/* Party Builder Element */}
+          <div className="bg-gray-800 rounded-lg border border-gray-700 p-6 mb-8">
             <div className="text-center mb-6">
-              <h3 className="text-lg font-semibold text-gray-200 mb-2">Damage check feature</h3>
+              <h3 className="text-lg font-semibold text-gray-200 mb-2">Party Builder</h3>
               <div className="text-sm text-gray-400 mb-4">
-                DPS requirement: <span className="font-semibold text-blue-400" title="Numbers are rounded up, and crowdsourced with help from the balance discord">
-                  {getDamageRequirement(activeZone).toLocaleString()}
-                </span>
+                Build your party composition to see damage comparisons across all bosses/phases
               </div>
             </div>
 
@@ -647,7 +786,7 @@ export default function Home() {
               <div className="col-span-1 md:col-span-1 h-full">
                 <RoleIconSelector
                   role="melee"
-                  jobs={fflogsData.groups.melee}
+                  jobs={fflogsData?.groups.melee || []}
                   selected={[partyComposition.melee1, partyComposition.melee2]}
                   max={2}
                   onSelect={(job) => {
@@ -666,7 +805,7 @@ export default function Home() {
               <div className="col-span-1 md:col-span-1 h-full">
                 <RoleIconSelector
                   role="ranged"
-                  jobs={fflogsData.groups.ranged}
+                  jobs={fflogsData?.groups.ranged || []}
                   selected={[partyComposition.ranged]}
                   max={1}
                   onSelect={(job) => {
@@ -677,7 +816,7 @@ export default function Home() {
               <div className="col-span-1 md:col-span-1 h-full">
                 <RoleIconSelector
                   role="caster"
-                  jobs={fflogsData.groups.caster}
+                  jobs={fflogsData?.groups.caster || []}
                   selected={[partyComposition.caster]}
                   max={1}
                   onSelect={(job) => {
@@ -690,7 +829,7 @@ export default function Home() {
               <div className="col-span-1 md:col-span-1 h-full">
                 <RoleIconSelector
                   role="tank"
-                  jobs={fflogsData.groups.tank}
+                  jobs={fflogsData?.groups.tank || []}
                   selected={[partyComposition.tank1, partyComposition.tank2]}
                   max={2}
                   onSelect={(job) => {
@@ -709,7 +848,7 @@ export default function Home() {
               <div className="col-span-1 md:col-span-1 h-full">
                 <RoleIconSelector
                   role="healer"
-                  jobs={fflogsData.groups.healer}
+                  jobs={fflogsData?.groups.healer || []}
                   selected={[partyComposition.healer1, partyComposition.healer2]}
                   max={2}
                   onSelect={(job) => {
@@ -731,9 +870,6 @@ export default function Home() {
                     <div className="text-center flex flex-col justify-center h-full">
                       {(() => {
                         const selectedCount = Object.values(partyComposition).filter(job => job !== '').length;
-                        const partyDamage = calculatePartyDamage();
-                        const requirement = getDamageRequirement(activeZone);
-                        const percentage = requirement > 0 ? (partyDamage / requirement) * 100 : 0;
                         if (selectedCount < 8) {
                           return (
                             <div className="text-gray-400 text-sm">
@@ -742,20 +878,9 @@ export default function Home() {
                           );
                         }
                         return (
-                          <>
-                            <div className="text-xl font-bold text-gray-200">
-                              {partyDamage.toLocaleString()} / <span title="Numbers are rounded up, and crowdsourced with help from the balance discord">{requirement.toLocaleString()}</span>
-                            </div>
-                            <div className={`text-base font-semibold ${partyDamage >= requirement ? 'text-green-400' : 'text-red-400'}`}>
-                              {partyDamage >= requirement ? '✓ Meets Requirement' : '✗ Below Requirement'}
-                            </div>
-                            <div className="text-xs text-gray-400">
-                              {partyDamage >= requirement 
-                                ? `With this composition, if everyone is playing at an average level, you beat the damage check by ${(percentage - 100).toFixed(1)}%`
-                                : `With this composition, if everyone is playing at an average level, you miss the damage check by ${(100 - percentage).toFixed(1)}%`
-                              }
-                            </div>
-                          </>
+                          <div className="text-gray-400 text-sm">
+                            Party composition complete! Check damage requirements below.
+                          </div>
                         );
                       })()}
                     </div>
@@ -763,6 +888,179 @@ export default function Home() {
                 </div>
               </div>
             </div>
+          </div>
+
+          <div className="space-y-6">
+            {[boss1Id, boss2Id, boss3Id, boss4Id, phase1Id, phase2Id, phase3Id, phase4Id, phase5Id].map((id) => {
+              const data = partyCompositionData[id];
+              const requirement = getDamageRequirement(id);
+              const bossName = data?.bossName?.replace(/^.*?:\s*/, '') || (id <= 5 ? `Boss ${id}` : `Phase ${id - 6}`);
+              const zoneName = id <= 5 ? 'Savage' : 'Ultimate';
+              
+              // Calculate party damage for this specific boss/phase
+              const calculatePartyDamageForBoss = () => {
+                if (!data) return 0;
+                
+                let totalDamage = 0;
+                const selectedJobs = Object.values(partyComposition).filter(job => job !== '');
+                
+                selectedJobs.forEach(jobName => {
+                  // Find the job in the groups
+                  for (const [, jobs] of Object.entries(data.groups)) {
+                    const job = jobs.find(j => j.job === jobName);
+                    if (job) {
+                      const damage = parseInt(job.score.replace(/,/g, '')) || 0;
+                      totalDamage += damage;
+                      break;
+                    }
+                  }
+                });
+                
+                return totalDamage;
+              };
+              
+              const partyDamage = calculatePartyDamageForBoss();
+              const percentage = requirement > 0 ? (partyDamage / requirement) * 100 : 0;
+              const selectedCount = Object.values(partyComposition).filter(job => job !== '').length;
+              
+              return (
+                <div key={id} className="bg-gray-800 rounded-lg border border-gray-700 p-6">
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-200">{bossName}</h3>
+                      <p className="text-sm text-gray-400">{zoneName}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm text-gray-400">DPS Requirement</p>
+                      <p className="text-lg font-bold text-blue-400">{requirement.toLocaleString()}</p>
+                    </div>
+                  </div>
+                  
+                  {data ? (
+                    <div className="space-y-4">
+                      {selectedCount === 8 && (
+                        <div className="flex gap-4">
+                          <div className="bg-gray-700 rounded p-3 flex-1">
+                            <h4 className="text-sm font-semibold text-gray-300 mb-2">Selected Jobs:</h4>
+                            <div className="text-xs text-gray-300">
+                              {(() => {
+                                // Show only selected jobs and their damage
+                                const selectedJobs = Object.values(partyComposition).filter(job => job !== '');
+                                const jobData = selectedJobs.map(jobName => {
+                                  // Find the job's damage across all groups
+                                  for (const [, jobs] of Object.entries(data.groups)) {
+                                    const job = jobs.find(j => j.job === jobName);
+                                    if (job) {
+                                      return { job: jobName, damage: job.score };
+                                    }
+                                  }
+                                  return { job: jobName, damage: '0' };
+                                });
+                                
+                                return (
+                                  <ul className="space-y-1">
+                                    {jobData.map((job, index) => (
+                                      <li key={index} className="flex justify-between items-center">
+                                        <span className="text-gray-300">{job.job}:</span>
+                                        <span className="text-blue-400 font-semibold">{job.damage} DPS</span>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                );
+                              })()}
+                            </div>
+                          </div>
+                          
+                          <div className="bg-gray-700 rounded p-3 flex-1 relative">
+                            {(id === phase3Id && showPhase3Warning) || (id === phase5Id && showPhase5Warning) ? (
+                              <div className="absolute inset-0 bg-black bg-opacity-75 rounded-lg flex items-center justify-center z-10">
+                                <div className="bg-gray-800 rounded-lg border border-gray-700 p-4 mx-4 max-w-sm">
+                                  <div className="flex items-start mb-3">
+                                    <div className="text-yellow-400 text-xl mr-2">⚠️</div>
+                                    <div>
+                                      <h4 className="text-sm font-semibold text-gray-200 mb-1">
+                                        {id === phase3Id ? 'Phase 3' : 'Phase 5'} Damage Check Warning
+                                      </h4>
+                                      <p className="text-xs text-gray-300 leading-relaxed">
+                                        There is no party composition that meets the {id === phase3Id ? 'Phase 3' : 'Phase 5'} damage check ({requirement.toLocaleString()} DPS) with everyone performing at median DPS levels for their class. Even the most optimal composition falls short of this requirement.
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <div className="flex justify-end">
+                                    <button
+                                      onClick={() => {
+                                        if (id === phase3Id) setShowPhase3Warning(false);
+                                        if (id === phase5Id) setShowPhase5Warning(false);
+                                      }}
+                                      className="px-3 py-1 bg-gray-600 hover:bg-gray-700 text-white rounded text-xs transition-colors"
+                                    >
+                                      Understood
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            ) : null}
+                            <h4 className="text-sm font-semibold text-gray-300 mb-2">Total Party DPS:</h4>
+                            <div className="text-center">
+                              <div className="text-2xl font-bold text-green-400 mb-2">
+                                {(() => {
+                                  const selectedJobs = Object.values(partyComposition).filter(job => job !== '');
+                                  const totalDPS = selectedJobs.reduce((sum, jobName) => {
+                                    for (const [, jobs] of Object.entries(data.groups)) {
+                                      const job = jobs.find(j => j.job === jobName);
+                                      if (job) {
+                                        return sum + (parseInt(job.score.replace(/,/g, '')) || 0);
+                                      }
+                                    }
+                                    return sum;
+                                  }, 0);
+                                  return totalDPS.toLocaleString();
+                                })()}
+                              </div>
+                              <div className="text-sm text-gray-400 mb-1">
+                                vs Required: {requirement.toLocaleString()}
+                              </div>
+                              <div className={`text-sm font-semibold mb-2 ${partyDamage >= requirement ? 'text-green-400' : 'text-red-400'}`}>
+                                {partyDamage >= requirement ? '✓ Meets Requirement' : '✗ Below Requirement'}
+                              </div>
+                              <div className="text-xs text-gray-400 mb-3">
+                                {partyDamage >= requirement 
+                                  ? `With this composition, if everyone is playing at an average level, you beat the damage check by ${(percentage - 100).toFixed(1)}% without LB`
+                                  : `With this composition, if everyone is playing at an average level, you miss the damage check by ${(100 - percentage).toFixed(1)}% without LB`
+                                }
+                              </div>
+                              {id === phase3Id && (
+                                <button
+                                  onClick={() => setShowPhase3Warning(true)}
+                                  className="px-3 py-1 text-xs bg-yellow-600 hover:bg-yellow-700 text-white rounded-md transition-colors"
+                                  title="Click for important information about this phase"
+                                >
+                                  ⚠️ Damage Warning
+                                </button>
+                              )}
+                              {id === phase5Id && (
+                                <button
+                                  onClick={() => setShowPhase5Warning(true)}
+                                  className="px-3 py-1 text-xs bg-yellow-600 hover:bg-yellow-700 text-white rounded-md transition-colors"
+                                  title="Click for important information about this phase"
+                                >
+                                  ⚠️ Damage Warning
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-center py-4">
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                      <p className="text-sm text-gray-400">Loading data...</p>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
