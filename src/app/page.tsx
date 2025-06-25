@@ -644,7 +644,7 @@ export default function Home() {
         {loading && (
           <div className="flex justify-center items-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-            <span className="ml-3 text-gray-600 dark:text-gray-400">Loading data...</span>
+            <span className="ml-3 text-gray-600">Loading data...</span>
           </div>
         )}
         {fflogsData && !loading && activeZone !== partyCompositionId && (
@@ -758,7 +758,7 @@ export default function Home() {
           </div>
         )}
         {!fflogsData && !loading && !error && (
-          <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+          <div className="text-center py-12 text-gray-500">
             Click one of the buttons above to load FFLogs data.
           </div>
         )}
