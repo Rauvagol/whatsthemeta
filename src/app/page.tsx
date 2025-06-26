@@ -445,7 +445,7 @@ export default function Home() {
   const [pendingZone, setPendingZone] = useState<number | null>(null);
 
   // Add state for which button is loading
-  const [loadingButtonId, setLoadingButtonId] = useState<number | null>(null);
+  const [, setLoadingButtonId] = useState<number | null>(null);
 
   // Update fetchFFLogsData to not clear fflogsData or set loading immediately
   const fetchFFLogsData = async (id: number) => {
