@@ -58,6 +58,20 @@ function isColorLight(hex: string) {
   return luminance > 0.2;
 }
 
+// Utility to abbreviate boss names (e.g., "Firstname Lastname" becomes "F. Lastname")
+function abbreviateBossName(name: string, maxLength: number = 12): string {
+  if (name.length <= maxLength) return name;
+  
+  const words = name.trim().split(' ');
+  if (words.length <= 1) return name;
+  
+  const firstWords = words.slice(0, -1).map(word => word.charAt(0) + '.');
+  const lastWord = words[words.length - 1];
+  
+  const abbreviated = [...firstWords, lastWord].join(' ');
+  return abbreviated.length <= maxLength ? abbreviated : name;
+}
+
 // Pie chart component for a group with tooltip
 function GroupPieChart({ jobs }: { jobs: { job: string; count: string }[] }) {
   const [hovered, setHovered] = useState<number | null>(null);
@@ -138,16 +152,25 @@ interface RoleIconSelectorProps {
   max: number;
   onSelect: (job: string) => void;
   className?: string;
+  isFreeform?: boolean;
 }
 
-function RoleIconSelector({ role, jobs, selected, max, onSelect, className = '' }: RoleIconSelectorProps) {
+function RoleIconSelector({ role, jobs, selected, max, onSelect, className = '', isFreeform = false }: RoleIconSelectorProps) {
   // Capitalize job name for icon file
   const getIconPath = (jobName: string) => {
     // Remove spaces and capitalize each word for filename
     return `/assets/job-icons/${jobName.replace(/ /g, '').replace(/(^|\s)([a-z])/g, (m, p1, p2) => p2.toUpperCase())}.png`;
   };
   const isSelected = (job: { job: string }) => selected.includes(job.job);
-  const isDisabled = (job: { job: string }) => !isSelected(job) && selected.filter(Boolean).length >= max;
+  const isDisabled = (job: { job: string }) => {
+    if (isFreeform) {
+      // In freeform mode, only disable if we have 8 total jobs and this job isn't selected
+      return selected.length >= 8 && !isSelected(job);
+    } else {
+      // Normal mode: disable if not selected and we've reached the max for this role
+      return !isSelected(job) && selected.filter(Boolean).length >= max;
+    }
+  };
 
   // Sort jobs alphabetically by job name
   const sortedJobs = [...jobs].sort((a, b) => a.job.localeCompare(b.job));
@@ -168,7 +191,9 @@ function RoleIconSelector({ role, jobs, selected, max, onSelect, className = '' 
 
   return (
     <div className={`flex flex-col items-center bg-gray-700 rounded-lg p-3 border border-gray-600 mb-4 h-full ${className}`}>
-      <h4 className="text-sm font-semibold text-gray-300 mb-2 text-center">{GROUP_LABELS[role]} {max > 1 ? `(Select ${max})` : `(Select 1)`}</h4>
+      <h4 className="text-sm font-semibold text-gray-300 mb-2 text-center">
+        {GROUP_LABELS[role]} (Select {Math.max(0, max - selected.filter(Boolean).length)})
+      </h4>
       {isMelee ? (
         <>
           <div className="flex flex-row justify-center gap-2 mb-2">
@@ -193,6 +218,12 @@ function RoleIconSelector({ role, jobs, selected, max, onSelect, className = '' 
                   className="block"
                   draggable={false}
                 />
+                {/* Freeform count badge */}
+                {isFreeform && selected.filter(j => j === job.job).length > 0 && (
+                  <span className="absolute top-0 right-0 bg-blue-600 text-white text-xs font-bold rounded-full px-1.5 py-0.5 shadow" style={{ transform: 'translate(35%,-35%)' }}>
+                    {selected.filter(j => j === job.job).length}
+                  </span>
+                )}
               </button>
             ))}
           </div>
@@ -218,6 +249,12 @@ function RoleIconSelector({ role, jobs, selected, max, onSelect, className = '' 
                   className="block"
                   draggable={false}
                 />
+                {/* Freeform count badge */}
+                {isFreeform && selected.filter(j => j === job.job).length > 0 && (
+                  <span className="absolute top-0 right-0 bg-blue-600 text-white text-xs font-bold rounded-full px-1.5 py-0.5 shadow" style={{ transform: 'translate(35%,-35%)' }}>
+                    {selected.filter(j => j === job.job).length}
+                  </span>
+                )}
               </button>
             ))}
           </div>
@@ -251,6 +288,12 @@ function RoleIconSelector({ role, jobs, selected, max, onSelect, className = '' 
                   className="block"
                   draggable={false}
                 />
+                {/* Freeform count badge */}
+                {isFreeform && selected.filter(j => j === job.job).length > 0 && (
+                  <span className="absolute top-0 right-0 bg-blue-600 text-white text-xs font-bold rounded-full px-1.5 py-0.5 shadow" style={{ transform: 'translate(35%,-35%)' }}>
+                    {selected.filter(j => j === job.job).length}
+                  </span>
+                )}
               </button>
             );
           })}
@@ -285,6 +328,9 @@ export default function Home() {
     healer1: '',
     healer2: '',
   });
+
+  // Freeform party composition state
+  const [freeformParty, setFreeformParty] = useState<string[]>([]);
 
   // Zone and boss IDs as variables
   const savageId = 1;
@@ -322,6 +368,16 @@ export default function Home() {
   // Add state for image modal
   const [showImageModal, setShowImageModal] = useState(false);
   
+  // Add state for checkbox selections
+  const [checkboxSelections, setCheckboxSelections] = useState({
+    boss1: false,
+    boss2: false,
+    boss3: false,
+    boss4: false,
+    ultimate: false,
+    freeform: false,
+  });
+  
   // Add state for collapsible sections in about popup
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     howToUse: true,
@@ -338,6 +394,35 @@ export default function Home() {
       ...prev,
       [sectionKey]: !prev[sectionKey]
     }));
+  };
+
+  // Helper function to toggle checkbox selections
+  const toggleCheckbox = (key: keyof typeof checkboxSelections) => {
+    setCheckboxSelections(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
+  };
+
+  // Helper function to handle freeform job selection
+  const handleFreeformJobSelect = (jobName: string) => {
+    if (checkboxSelections.freeform) {
+      setFreeformParty(prev => {
+        const jobCount = prev.filter(job => job === jobName).length;
+        const totalCount = prev.length;
+        
+        if (totalCount < 8) {
+          // If we have room, add another copy
+          return [...prev, jobName];
+        } else if (jobCount > 0) {
+          // If we're at max capacity and this job is already selected, remove all instances
+          return prev.filter(job => job !== jobName);
+        } else {
+          // If we're at max capacity and this job isn't selected, don't add it
+          return prev;
+        }
+      });
+    }
   };
 
   // Helper function to get damage requirement for each boss
@@ -420,9 +505,6 @@ export default function Home() {
     }
   };
 
-  // Boss button style
-  // const bossBtnClass = "px-2 py-1 text-sm bg-blue-500 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors";
-
   // If boss page or phase page, find the max score across all jobs in all groups
   let maxBossScore = 100;
   const isIndividualBossOrPhase = activeZone && [boss1Id, boss2Id, boss3Id, boss4Id, phase1Id, phase2Id, phase3Id, phase4Id, phase5Id].includes(activeZone);
@@ -465,12 +547,12 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-zinc-900">
       {/* Header with buttons */}
-      <header className="bg-gray-800 shadow-sm border-b border-gray-700">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
+      <header className="sticky top-0 z-50 bg-gray-800 shadow-sm border-b border-gray-700 h-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full">
+          <div className="flex justify-between items-center h-full">
             <div className="flex items-center space-x-4">
               <h1
-                className="text-xl font-semibold text-white relative group cursor-pointer"
+                className="text-xl font-semibold text-white relative group cursor-pointer leading-tight my-0"
               >
                 What&apos;s the Meta?
                 <span className="absolute left-1/2 -translate-x-1/2 mt-2 px-3 py-1 rounded bg-zinc-900 text-white text-xs border border-gray-700 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity z-50 whitespace-nowrap">
@@ -657,7 +739,7 @@ export default function Home() {
               </div>
             </div>
             
-            <div className="flex space-x-4 relative min-h-[48px] items-center">
+            <div className="flex space-x-4 relative min-h-[48px] items-center mt-[2px]">
               {/* Savage Button and Boss Buttons */}
               <div className="relative">
                 <button
@@ -668,43 +750,45 @@ export default function Home() {
                     if (aboutExpanded) setAboutExpanded(false);
                   }}
                   disabled={loading}
-                  className={`px-4 py-2 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 ${
+                  className={`px-2 py-1 font-semibold text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 ${
                     activeZone === savageId ? 'bg-blue-700 ring-2 ring-blue-400 ring-offset-2 ring-offset-gray-800' : 'bg-blue-600'
                   }`}
                   style={{ zIndex: 2 }}
                 >
-                  {loading && activeZone === savageId ? 'Loading...' : 'Savage'}
+                  Savage
                 </button>
                 {/* Boss Buttons Drop Down */}
-                <div className={`absolute top-full left-1/2 transform -translate-x-1/2 flex flex-row space-x-1 transition-all duration-300 ${savageExpanded ? 'opacity-100 max-h-[48px]' : 'opacity-0 max-h-0'} overflow-hidden mt-2`}>
-                  <button
-                    onClick={() => fetchFFLogsData(boss1Id)}
-                    disabled={loading}
-                    className={`pt-0 pb-2 px-2 text-sm text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors border-4 ${
-                      activeZone === boss1Id ? 'bg-blue-700 border-blue-300' : 'bg-blue-500 border-transparent'
-                    }`}
-                  >Boss 1</button>
-                  <button
-                    onClick={() => fetchFFLogsData(boss2Id)}
-                    disabled={loading}
-                    className={`pt-0 pb-2 px-2 text-sm text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors border-4 ${
-                      activeZone === boss2Id ? 'bg-blue-700 border-blue-300' : 'bg-blue-500 border-transparent'
-                    }`}
-                  >Boss 2</button>
-                  <button
-                    onClick={() => fetchFFLogsData(boss3Id)}
-                    disabled={loading}
-                    className={`pt-0 pb-2 px-2 text-sm text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors border-4 ${
-                      activeZone === boss3Id ? 'bg-blue-700 border-blue-300' : 'bg-blue-500 border-transparent'
-                    }`}
-                  >Boss 3</button>
-                  <button
-                    onClick={() => fetchFFLogsData(boss4Id)}
-                    disabled={loading}
-                    className={`pt-0 pb-2 px-2 text-sm text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors border-4 ${
-                      activeZone === boss4Id ? 'bg-blue-700 border-blue-300' : 'bg-blue-500 border-transparent'
-                    }`}
-                  >Boss 4</button>
+                <div className={`absolute top-full left-1/2 transform -translate-x-1/2 transition-all duration-300 ${savageExpanded ? 'opacity-100 visible translate-y-0' : 'opacity-0 invisible -translate-y-4'} bg-gray-800 border border-gray-700 border-t-0 rounded-b-lg shadow-lg mt-[6px] py-[6px] px-[6px]`}>
+                  <div className="flex flex-row space-x-1 -mt-[2px]">
+                    <button
+                      onClick={() => fetchFFLogsData(boss1Id)}
+                      disabled={loading}
+                      className={`pt-0.5 pb-1 px-1 text-sm font-semibold text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors border-2 whitespace-nowrap flex-shrink-0 ${
+                        activeZone === boss1Id ? 'bg-blue-700 border-blue-300' : 'bg-blue-500 border-transparent'
+                      }`}
+                    >Boss 1</button>
+                    <button
+                      onClick={() => fetchFFLogsData(boss2Id)}
+                      disabled={loading}
+                      className={`pt-0.5 pb-1 px-1 text-sm font-semibold text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors border-2 whitespace-nowrap flex-shrink-0 ${
+                        activeZone === boss2Id ? 'bg-blue-700 border-blue-300' : 'bg-blue-500 border-transparent'
+                      }`}
+                    >Boss 2</button>
+                    <button
+                      onClick={() => fetchFFLogsData(boss3Id)}
+                      disabled={loading}
+                      className={`pt-0.5 pb-1 px-1 text-sm font-semibold text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors border-2 whitespace-nowrap flex-shrink-0 ${
+                        activeZone === boss3Id ? 'bg-blue-700 border-blue-300' : 'bg-blue-500 border-transparent'
+                      }`}
+                    >Boss 3</button>
+                    <button
+                      onClick={() => fetchFFLogsData(boss4Id)}
+                      disabled={loading}
+                      className={`pt-0.5 pb-1 px-1 text-sm font-semibold text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors border-2 whitespace-nowrap flex-shrink-0 ${
+                        activeZone === boss4Id ? 'bg-blue-700 border-blue-300' : 'bg-blue-500 border-transparent'
+                      }`}
+                    >Boss 4</button>
+                  </div>
                 </div>
               </div>
               
@@ -719,30 +803,32 @@ export default function Home() {
                     if (aboutExpanded) setAboutExpanded(false);
                   }}
                   disabled={loading}
-                  className={`px-4 py-2 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors ${
+                  className={`px-2 py-1 font-semibold text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors ${
                     activeZone === ultimateId ? 'bg-green-700 ring-2 ring-green-400 ring-offset-2 ring-offset-gray-800' : 'bg-green-600'
                   }`}
                   style={{ zIndex: 2 }}
                 >
-                  {loading && activeZone === ultimateId ? 'Loading...' : 'Ultimate'}
+                  Ultimate
                 </button>
                 {/* Phase Buttons Drop Down */}
-                <div className={`absolute top-full left-1/2 transform -translate-x-1/2 flex flex-row space-x-1 transition-all duration-300 ${ultimateExpanded ? 'opacity-100 max-h-[48px]' : 'opacity-0 max-h-0'} overflow-hidden mt-2`}>
-                  <button onClick={() => fetchFFLogsData(phase1Id)} disabled={loading} className={`pt-0 pb-2 px-2 text-sm text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors border-4 ${
-                    activeZone === phase1Id ? 'bg-green-700 border-green-300' : 'bg-green-600 border-transparent'
-                  }`}>Phase 1</button>
-                  <button onClick={() => fetchFFLogsData(phase2Id)} disabled={loading} className={`pt-0 pb-2 px-2 text-sm text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors border-4 ${
-                    activeZone === phase2Id ? 'bg-green-700 border-green-300' : 'bg-green-600 border-transparent'
-                  }`}>Phase 2</button>
-                  <button onClick={() => fetchFFLogsData(phase3Id)} disabled={loading} className={`pt-0 pb-2 px-2 text-sm text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors border-4 ${
-                    activeZone === phase3Id ? 'bg-green-700 border-green-300' : 'bg-green-600 border-transparent'
-                  }`}>Phase 3</button>
-                  <button onClick={() => fetchFFLogsData(phase4Id)} disabled={loading} className={`pt-0 pb-2 px-2 text-sm text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors border-4 ${
-                    activeZone === phase4Id ? 'bg-green-700 border-green-300' : 'bg-green-600 border-transparent'
-                  }`}>Phase 4</button>
-                  <button onClick={() => fetchFFLogsData(phase5Id)} disabled={loading} className={`pt-0 pb-2 px-2 text-sm text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors border-4 ${
-                    activeZone === phase5Id ? 'bg-green-700 border-green-300' : 'bg-green-600 border-transparent'
-                  }`}>Phase 5</button>
+                <div className={`absolute top-full left-1/2 transform -translate-x-1/2 transition-all duration-300 ${ultimateExpanded ? 'opacity-100 visible translate-y-0' : 'opacity-0 invisible -translate-y-4'} bg-gray-800 border border-gray-700 border-t-0 rounded-b-lg shadow-lg mt-[6px] py-[6px] px-[6px]`}>
+                  <div className="flex flex-row space-x-1 -mt-[2px]">
+                    <button onClick={() => fetchFFLogsData(phase1Id)} disabled={loading} className={`pt-0.5 pb-1 px-1 text-sm font-semibold text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors border-2 whitespace-nowrap flex-shrink-0 ${
+                      activeZone === phase1Id ? 'bg-green-700 border-green-300' : 'bg-green-600 border-transparent'
+                    }`}>Phase 1</button>
+                    <button onClick={() => fetchFFLogsData(phase2Id)} disabled={loading} className={`pt-0.5 pb-1 px-1 text-sm font-semibold text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors border-2 whitespace-nowrap flex-shrink-0 ${
+                      activeZone === phase2Id ? 'bg-green-700 border-green-300' : 'bg-green-600 border-transparent'
+                    }`}>Phase 2</button>
+                    <button onClick={() => fetchFFLogsData(phase3Id)} disabled={loading} className={`pt-0.5 pb-1 px-1 text-sm font-semibold text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors border-2 whitespace-nowrap flex-shrink-0 ${
+                      activeZone === phase3Id ? 'bg-green-700 border-green-300' : 'bg-green-600 border-transparent'
+                    }`}>Phase 3</button>
+                    <button onClick={() => fetchFFLogsData(phase4Id)} disabled={loading} className={`pt-0.5 pb-1 px-1 text-sm font-semibold text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors border-2 whitespace-nowrap flex-shrink-0 ${
+                      activeZone === phase4Id ? 'bg-green-700 border-green-300' : 'bg-green-600 border-transparent'
+                    }`}>Phase 4</button>
+                    <button onClick={() => fetchFFLogsData(phase5Id)} disabled={loading} className={`pt-0.5 pb-1 px-1 text-sm font-semibold text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors border-2 whitespace-nowrap flex-shrink-0 ${
+                      activeZone === phase5Id ? 'bg-green-700 border-green-300' : 'bg-green-600 border-transparent'
+                    }`}>Phase 5</button>
+                  </div>
                 </div>
               </div>
 
@@ -769,12 +855,12 @@ export default function Home() {
                     });
                   }}
                   disabled={loading}
-                  className={`px-4 py-2 text-white rounded-md hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors ${
+                  className={`px-2 py-1 font-semibold text-white rounded-md hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors ${
                     activeZone === partyCompositionId ? 'bg-purple-700 ring-2 ring-purple-400 ring-offset-2 ring-offset-gray-800' : 'bg-purple-600'
                   }`}
                   style={{ zIndex: 2 }}
                 >
-                  {loading && activeZone === partyCompositionId ? 'Loading...' : 'Party Composition'}
+                  Party Composition
                 </button>
               </div>
             </div>
@@ -927,7 +1013,26 @@ export default function Home() {
             Party Composition Analysis
           </h2>
 
-          <div className="bg-gray-800 rounded-lg border border-gray-700 p-6 mb-8">
+          <div className="bg-gray-800 rounded-lg border border-gray-700 p-6 mb-8 relative">
+            <button
+              onClick={() => {
+                setPartyComposition({
+                  melee1: '',
+                  melee2: '',
+                  ranged: '',
+                  caster: '',
+                  tank1: '',
+                  tank2: '',
+                  healer1: '',
+                  healer2: '',
+                });
+                setFreeformParty([]);
+              }}
+              className="absolute top-4 right-4 px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white text-xs rounded shadow focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
+              title="Reset party selection"
+            >
+              Reset
+            </button>
             <div className="text-center mb-6">
               <h3 className="text-lg font-semibold text-gray-200 mb-2">Party Builder</h3>
               <div className="text-sm text-gray-400 mb-4">
@@ -942,17 +1047,22 @@ export default function Home() {
                 <RoleIconSelector
                   role="melee"
                   jobs={fflogsData?.groups.melee || []}
-                  selected={[partyComposition.melee1, partyComposition.melee2]}
-                  max={2}
+                  selected={checkboxSelections.freeform ? freeformParty : [partyComposition.melee1, partyComposition.melee2]}
+                  max={checkboxSelections.freeform ? 8 : 2}
+                  isFreeform={checkboxSelections.freeform}
                   onSelect={(job) => {
-                    if (partyComposition.melee1 === job) {
-                      setPartyComposition(prev => ({ ...prev, melee1: '' }));
-                    } else if (partyComposition.melee2 === job) {
-                      setPartyComposition(prev => ({ ...prev, melee2: '' }));
-                    } else if (!partyComposition.melee1) {
-                      setPartyComposition(prev => ({ ...prev, melee1: job }));
-                    } else if (!partyComposition.melee2) {
-                      setPartyComposition(prev => ({ ...prev, melee2: job }));
+                    if (checkboxSelections.freeform) {
+                      handleFreeformJobSelect(job);
+                    } else {
+                      if (partyComposition.melee1 === job) {
+                        setPartyComposition(prev => ({ ...prev, melee1: '' }));
+                      } else if (partyComposition.melee2 === job) {
+                        setPartyComposition(prev => ({ ...prev, melee2: '' }));
+                      } else if (!partyComposition.melee1) {
+                        setPartyComposition(prev => ({ ...prev, melee1: job }));
+                      } else if (!partyComposition.melee2) {
+                        setPartyComposition(prev => ({ ...prev, melee2: job }));
+                      }
                     }
                   }}
                 />
@@ -961,10 +1071,15 @@ export default function Home() {
                 <RoleIconSelector
                   role="ranged"
                   jobs={fflogsData?.groups.ranged || []}
-                  selected={[partyComposition.ranged]}
-                  max={1}
+                  selected={checkboxSelections.freeform ? freeformParty : [partyComposition.ranged]}
+                  max={checkboxSelections.freeform ? 8 : 1}
+                  isFreeform={checkboxSelections.freeform}
                   onSelect={(job) => {
-                    setPartyComposition(prev => ({ ...prev, ranged: prev.ranged === job ? '' : job }));
+                    if (checkboxSelections.freeform) {
+                      handleFreeformJobSelect(job);
+                    } else {
+                      setPartyComposition(prev => ({ ...prev, ranged: prev.ranged === job ? '' : job }));
+                    }
                   }}
                 />
               </div>
@@ -972,10 +1087,15 @@ export default function Home() {
                 <RoleIconSelector
                   role="caster"
                   jobs={fflogsData?.groups.caster || []}
-                  selected={[partyComposition.caster]}
-                  max={1}
+                  selected={checkboxSelections.freeform ? freeformParty : [partyComposition.caster]}
+                  max={checkboxSelections.freeform ? 8 : 1}
+                  isFreeform={checkboxSelections.freeform}
                   onSelect={(job) => {
-                    setPartyComposition(prev => ({ ...prev, caster: prev.caster === job ? '' : job }));
+                    if (checkboxSelections.freeform) {
+                      handleFreeformJobSelect(job);
+                    } else {
+                      setPartyComposition(prev => ({ ...prev, caster: prev.caster === job ? '' : job }));
+                    }
                   }}
                 />
               </div>
@@ -985,17 +1105,22 @@ export default function Home() {
                 <RoleIconSelector
                   role="tank"
                   jobs={fflogsData?.groups.tank || []}
-                  selected={[partyComposition.tank1, partyComposition.tank2]}
-                  max={2}
+                  selected={checkboxSelections.freeform ? freeformParty : [partyComposition.tank1, partyComposition.tank2]}
+                  max={checkboxSelections.freeform ? 8 : 2}
+                  isFreeform={checkboxSelections.freeform}
                   onSelect={(job) => {
-                    if (partyComposition.tank1 === job) {
-                      setPartyComposition(prev => ({ ...prev, tank1: '' }));
-                    } else if (partyComposition.tank2 === job) {
-                      setPartyComposition(prev => ({ ...prev, tank2: '' }));
-                    } else if (!partyComposition.tank1) {
-                      setPartyComposition(prev => ({ ...prev, tank1: job }));
-                    } else if (!partyComposition.tank2) {
-                      setPartyComposition(prev => ({ ...prev, tank2: job }));
+                    if (checkboxSelections.freeform) {
+                      handleFreeformJobSelect(job);
+                    } else {
+                      if (partyComposition.tank1 === job) {
+                        setPartyComposition(prev => ({ ...prev, tank1: '' }));
+                      } else if (partyComposition.tank2 === job) {
+                        setPartyComposition(prev => ({ ...prev, tank2: '' }));
+                      } else if (!partyComposition.tank1) {
+                        setPartyComposition(prev => ({ ...prev, tank1: job }));
+                      } else if (!partyComposition.tank2) {
+                        setPartyComposition(prev => ({ ...prev, tank2: job }));
+                      }
                     }
                   }}
                 />
@@ -1004,17 +1129,22 @@ export default function Home() {
                 <RoleIconSelector
                   role="healer"
                   jobs={fflogsData?.groups.healer || []}
-                  selected={[partyComposition.healer1, partyComposition.healer2]}
-                  max={2}
+                  selected={checkboxSelections.freeform ? freeformParty : [partyComposition.healer1, partyComposition.healer2]}
+                  max={checkboxSelections.freeform ? 8 : 2}
+                  isFreeform={checkboxSelections.freeform}
                   onSelect={(job) => {
-                    if (partyComposition.healer1 === job) {
-                      setPartyComposition(prev => ({ ...prev, healer1: '' }));
-                    } else if (partyComposition.healer2 === job) {
-                      setPartyComposition(prev => ({ ...prev, healer2: '' }));
-                    } else if (!partyComposition.healer1) {
-                      setPartyComposition(prev => ({ ...prev, healer1: job }));
-                    } else if (!partyComposition.healer2) {
-                      setPartyComposition(prev => ({ ...prev, healer2: job }));
+                    if (checkboxSelections.freeform) {
+                      handleFreeformJobSelect(job);
+                    } else {
+                      if (partyComposition.healer1 === job) {
+                        setPartyComposition(prev => ({ ...prev, healer1: '' }));
+                      } else if (partyComposition.healer2 === job) {
+                        setPartyComposition(prev => ({ ...prev, healer2: '' }));
+                      } else if (!partyComposition.healer1) {
+                        setPartyComposition(prev => ({ ...prev, healer1: job }));
+                      } else if (!partyComposition.healer2) {
+                        setPartyComposition(prev => ({ ...prev, healer2: job }));
+                      }
                     }
                   }}
                 />
@@ -1023,26 +1153,104 @@ export default function Home() {
                 <div className="w-full flex flex-col justify-center h-full">
                   <div className="bg-gray-700 rounded-lg p-3 h-full flex flex-col justify-center">
                     <div className="text-center flex flex-col justify-center h-full">
-                      {(() => {
-                        const selectedCount = Object.values(partyComposition).filter(job => job !== '').length;
-                        if (selectedCount < 8) {
-                          return (
-                            <div className="text-gray-400 text-sm">
-                              Select all 8 party members to see damage comparison
-                            </div>
-                          );
-                        }
-                        return (
-                          <div className="text-gray-400 text-sm">
-                            Party composition complete! Check damage requirements below.
-                          </div>
-                        );
-                      })()}
+                      <div className="grid grid-cols-2 gap-2">
+                        <button 
+                          onClick={() => toggleCheckbox('boss1')}
+                          className={`flex items-center justify-center gap-2 text-gray-200 text-base py-2 px-3 rounded-md transition-colors border-2 whitespace-nowrap ${
+                            checkboxSelections.boss1 
+                              ? 'bg-blue-600 border-blue-400' 
+                              : 'bg-gray-600 hover:bg-gray-500 border-transparent hover:border-gray-400'
+                          }`}
+                        >
+                          <span className="text-xs sm:text-sm">
+                            {partyCompositionData[boss1Id]?.bossName || 'Boss 1'}
+                          </span>
+                        </button>
+                        <button 
+                          onClick={() => toggleCheckbox('boss2')}
+                          className={`flex items-center justify-center gap-2 text-gray-200 text-base py-2 px-3 rounded-md transition-colors border-2 whitespace-nowrap ${
+                            checkboxSelections.boss2 
+                              ? 'bg-blue-600 border-blue-400' 
+                              : 'bg-gray-600 hover:bg-gray-500 border-transparent hover:border-gray-400'
+                          }`}
+                        >
+                          <span className="text-xs sm:text-sm">
+                            {partyCompositionData[boss2Id]?.bossName || 'Boss 2'}
+                          </span>
+                        </button>
+                        <button 
+                          onClick={() => toggleCheckbox('boss3')}
+                          className={`flex items-center justify-center gap-2 text-gray-200 text-base py-2 px-3 rounded-md transition-colors border-2 whitespace-nowrap ${
+                            checkboxSelections.boss3 
+                              ? 'bg-blue-600 border-blue-400' 
+                              : 'bg-gray-600 hover:bg-gray-500 border-transparent hover:border-gray-400'
+                          }`}
+                        >
+                          <span className="text-xs sm:text-sm">
+                            {partyCompositionData[boss3Id]?.bossName || 'Boss 3'}
+                          </span>
+                        </button>
+                        <button 
+                          onClick={() => toggleCheckbox('boss4')}
+                          className={`flex items-center justify-center gap-2 text-gray-200 text-base py-2 px-3 rounded-md transition-colors border-2 whitespace-nowrap ${
+                            checkboxSelections.boss4 
+                              ? 'bg-blue-600 border-blue-400' 
+                              : 'bg-gray-600 hover:bg-gray-500 border-transparent hover:border-gray-400'
+                          }`}
+                        >
+                          <span className="text-xs sm:text-sm">
+                            {partyCompositionData[boss4Id]?.bossName || 'Boss 4'}
+                          </span>
+                        </button>
+                        <button 
+                          onClick={() => toggleCheckbox('ultimate')}
+                          className={`flex items-center justify-center gap-2 text-gray-200 text-base py-2 px-3 rounded-md transition-colors border-2 whitespace-nowrap ${
+                            checkboxSelections.ultimate 
+                              ? 'bg-blue-600 border-blue-400' 
+                              : 'bg-gray-600 hover:bg-gray-500 border-transparent hover:border-gray-400'
+                          }`}
+                        >
+                          <span className="text-xs sm:text-sm">
+                            {partyCompositionData[phase1Id]?.zoneName || 'Ultimate'}
+                          </span>
+                        </button>
+                        <button 
+                          onClick={() => {
+                            toggleCheckbox('freeform');
+                            setPartyComposition({
+                              melee1: '',
+                              melee2: '',
+                              ranged: '',
+                              caster: '',
+                              tank1: '',
+                              tank2: '',
+                              healer1: '',
+                              healer2: '',
+                            });
+                            setFreeformParty([]);
+                          }}
+                          className={`flex items-center justify-center gap-2 text-gray-200 text-base py-2 px-3 rounded-md transition-colors border-2 whitespace-nowrap ${
+                            checkboxSelections.freeform 
+                              ? 'bg-blue-600 border-blue-400' 
+                              : 'bg-gray-600 hover:bg-gray-500 border-transparent hover:border-gray-400'
+                          }`}
+                        >
+                          <span className="text-xs sm:text-sm">Freeform</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
+
+            {/* Warning message for freeform mode */}
+            {checkboxSelections.freeform && (
+              <div className="mt-4 bg-amber-700 text-white text-xs px-4 py-2 rounded shadow font-semibold flex items-center gap-2 justify-center">
+                <span className="text-lg">⚠️</span>
+                Numbers may be inaccurate in freeform mode, as this allows party compositions that are not realistic.
+              </div>
+            )}
           </div>
 
           <div className="space-y-6">
@@ -1057,7 +1265,9 @@ export default function Home() {
                 if (!data) return 0;
                 
                 let totalDamage = 0;
-                const selectedJobs = Object.values(partyComposition).filter(job => job !== '');
+                const selectedJobs = checkboxSelections.freeform 
+                  ? freeformParty 
+                  : Object.values(partyComposition).filter(job => job !== '');
                 
                 selectedJobs.forEach(jobName => {
                   // Find the job in the groups
@@ -1076,10 +1286,16 @@ export default function Home() {
               
               const partyDamage = calculatePartyDamageForBoss();
               const percentage = requirement > 0 ? (partyDamage / requirement) * 100 : 0;
-              const selectedCount = Object.values(partyComposition).filter(job => job !== '').length;
+              const selectedCount = checkboxSelections.freeform 
+                ? freeformParty.length 
+                : Object.values(partyComposition).filter(job => job !== '').length;
               
+              // Before the return (
+              const showP3WarningIcon = id === phase3Id && selectedCount === 8 && partyDamage < requirement;
+              const showP5WarningIcon = id === phase5Id && selectedCount === 8 && partyDamage < requirement;
+
               return (
-                <div key={id} className="bg-gray-800 rounded-lg border border-gray-700 p-6">
+                <div key={id} className="bg-gray-800 rounded-lg border border-gray-700 p-6 relative">
                   <div className="flex justify-between items-start mb-4">
                     <div>
                       <h3 className="text-lg font-semibold text-gray-200">{bossName}</h3>
@@ -1093,14 +1309,16 @@ export default function Home() {
                   
                   {data ? (
                     <div className="space-y-4">
-                      {selectedCount === 8 && (
+                      {selectedCount > 0 ? (
                         <div className="flex gap-4">
                           <div className="bg-gray-700 rounded p-3 flex-1">
                             <h4 className="text-sm font-semibold text-gray-300 mb-2">Selected Jobs:</h4>
                             <div className="text-xs text-gray-300">
                               {(() => {
                                 // Show only selected jobs and their damage
-                                const selectedJobs = Object.values(partyComposition).filter(job => job !== '');
+                                const selectedJobs = checkboxSelections.freeform 
+                                  ? freeformParty 
+                                  : Object.values(partyComposition).filter(job => job !== '');
                                 const jobData = selectedJobs.map(jobName => {
                                   // Find the job's damage across all groups
                                   for (const [, jobs] of Object.entries(data.groups)) {
@@ -1125,85 +1343,78 @@ export default function Home() {
                               })()}
                             </div>
                           </div>
-                          
-                          <div className="bg-gray-700 rounded p-3 flex-1 flex-1 relative">
-                            {(id === phase3Id && showPhase3Warning) || (id === phase5Id && showPhase5Warning) ? (
-                              <div className="absolute inset-0 bg-black bg-opacity-75 rounded-lg flex items-center justify-center z-10">
-                                <div className="bg-gray-800 rounded-lg border border-gray-700 p-4 mx-4 max-w-sm">
-                                  <div className="flex items-start mb-3">
-                                    <div className="text-yellow-400 text-xl mr-2">⚠️</div>
-                                    <div>
-                                      <h4 className="text-sm font-semibold text-gray-200 mb-1">
-                                        {id === phase3Id ? 'Phase 3' : 'Phase 5'} Damage Check Warning
-                                      </h4>
-                                      <p className="text-xs text-gray-300 leading-relaxed">
-                                        There is no party composition that meets the {id === phase3Id ? 'Phase 3' : 'Phase 5'} damage check ({requirement.toLocaleString()} DPS) with everyone performing at median DPS levels for their class. Even the most optimal composition falls short of this requirement.
-                                      </p>
-                                    </div>
-                                  </div>
-                                  <div className="flex justify-end">
-                                    <button
-                                      onClick={() => {
-                                        if (id === phase3Id) setShowPhase3Warning(false);
-                                        if (id === phase5Id) setShowPhase5Warning(false);
-                                      }}
-                                      className="px-3 py-1 bg-gray-600 hover:bg-gray-700 text-white rounded text-xs transition-colors"
-                                    >
-                                      Understood
-                                    </button>
-                                  </div>
+                          <div className="bg-gray-700 rounded p-3 flex-1 relative">
+                            <h4 className="text-sm font-semibold text-gray-300 mb-2 flex items-center gap-2">
+                              Party DPS vs Requirement:
+                            </h4>
+                            <div className="w-full flex flex-col items-center">
+                              <div className="relative w-full h-8 bg-gray-600 rounded overflow-hidden mb-2" style={{ maxWidth: 340 }}>
+                                <div
+                                  className={`absolute left-0 top-0 h-full rounded ${partyDamage >= requirement ? 'bg-green-500' : 'bg-red-500'}`}
+                                  style={{ width: `${Math.min(100, (partyDamage / requirement) * 100)}%`, transition: 'width 0.3s' }}
+                                ></div>
+                                <div className="absolute inset-0 flex items-center justify-center text-xs font-bold text-white drop-shadow">
+                                  {partyDamage.toLocaleString()} / {requirement.toLocaleString()} DPS
                                 </div>
                               </div>
-                            ) : null}
-                            <h4 className="text-sm font-semibold text-gray-300 mb-2">Total Party DPS:</h4>
-                            <div className="text-center">
-                              <div className="text-2xl font-bold text-green-400 mb-2">
-                                {(() => {
-                                  const selectedJobs = Object.values(partyComposition).filter(job => job !== '');
-                                  const totalDPS = selectedJobs.reduce((sum, jobName) => {
-                                    for (const [, jobs] of Object.entries(data.groups)) {
-                                      const job = jobs.find(j => j.job === jobName);
-                                      if (job) {
-                                        return sum + (parseInt(job.score.replace(/,/g, '')) || 0);
-                                      }
-                                    }
-                                    return sum;
-                                  }, 0);
-                                  return totalDPS.toLocaleString();
-                                })()}
-                              </div>
-                              <div className="text-sm text-gray-400 mb-1">
-                                vs Required: {requirement.toLocaleString()}
-                              </div>
-                              <div className={`text-sm font-semibold mb-2 ${partyDamage >= requirement ? 'text-green-400' : 'text-red-400'}`}>
+                              <div className={`text-xs font-semibold ${partyDamage >= requirement ? 'text-green-400' : 'text-red-400'}`}
+                                style={{ minHeight: 20 }}>
                                 {partyDamage >= requirement ? '✓ Meets Requirement' : '✗ Below Requirement'}
                               </div>
-                              <div className="text-xs text-gray-400 mb-3">
-                                {partyDamage >= requirement 
-                                  ? `With this composition, if everyone is playing at an average level, you beat the damage check by ${(percentage - 100).toFixed(1)}% without LB`
-                                  : `With this composition, if everyone is playing at an average level, you miss the damage check by ${(100 - percentage).toFixed(1)}% without LB`
-                                }
-                              </div>
-                              {id === phase3Id && (
+                              {/* Damage Warning Button for P3/P5 - only show if freeform mode is off */}
+                              {!checkboxSelections.freeform && (showP3WarningIcon || showP5WarningIcon) && (
                                 <button
-                                  onClick={() => setShowPhase3Warning(true)}
-                                  className="px-3 py-1 text-xs bg-yellow-600 hover:bg-yellow-700 text-white rounded-md transition-colors"
-                                  title="Click for important information about this phase"
+                                  onClick={() => {
+                                    if (id === phase3Id) {
+                                      setShowPhase3Warning(true);
+                                      setShowPhase5Warning(false);
+                                    }
+                                    if (id === phase5Id) {
+                                      setShowPhase5Warning(true);
+                                      setShowPhase3Warning(false);
+                                    }
+                                  }}
+                                  className="mt-4 flex items-center gap-1 bg-amber-600 hover:bg-amber-700 text-white font-semibold text-sm px-2 py-1 rounded focus:outline-none focus:ring-2 focus:ring-amber-400 transition"
+                                  style={{ minHeight: 0, minWidth: 0, lineHeight: '1.2' }}
+                                  title="This phase's damage check is mathematically impossible with median DPS. Click for details."
                                 >
-                                  ⚠️ Damage Warning
+                                  <span className="text-base leading-none">⚠️</span>
+                                  <span>Damage Warning</span>
                                 </button>
                               )}
-                              {id === phase5Id && (
-                                <button
-                                  onClick={() => setShowPhase5Warning(true)}
-                                  className="px-3 py-1 text-xs bg-yellow-600 hover:bg-yellow-700 text-white rounded-md transition-colors"
-                                  title="Click for important information about this phase"
-                                >
-                                  ⚠️ Damage Warning
-                                </button>
+                              {/* Local overlay/modal for warning */}
+                              {((id === phase3Id && showPhase3Warning) || (id === phase5Id && showPhase5Warning)) && (
+                                <div className="absolute inset-0 bg-gray-900 flex items-center justify-center z-10 p-4">
+                                  <div className="w-full max-w-full max-h-full bg-gray-800 rounded-lg border border-gray-700 p-4 flex flex-col justify-center">
+                                    <div className="flex items-start justify-between mb-2">
+                                      <div className="flex items-center">
+                                        <div className="text-yellow-400 text-2xl mr-3 mt-1">⚠️</div>
+                                        <h4 className="text-sm font-semibold text-gray-100">
+                                          {id === phase3Id ? 'Phase 3' : 'Phase 5'} Damage Check Warning
+                                        </h4>
+                                      </div>
+                                      <button
+                                        onClick={() => {
+                                          if (id === phase3Id) setShowPhase3Warning(false);
+                                          if (id === phase5Id) setShowPhase5Warning(false);
+                                        }}
+                                        className="ml-4 px-4 py-1.5 bg-gray-600 hover:bg-gray-700 text-white rounded text-sm transition-colors"
+                                      >
+                                        Understood
+                                      </button>
+                                    </div>
+                                    <p className="break-words whitespace-normal text-sm text-gray-200 leading-relaxed">
+                                      There is no party composition that meets the {id === phase3Id ? 'Phase 3' : 'Phase 5'} damage check ({getDamageRequirement(id).toLocaleString()} DPS) with everyone performing at median DPS levels for their class. Even the most optimal composition falls short of this requirement.
+                                    </p>
+                                  </div>
+                                </div>
                               )}
                             </div>
                           </div>
+                        </div>
+                      ) : (
+                        <div className="text-gray-400 text-sm text-center py-4">
+                          Select jobs to see damage comparison
                         </div>
                       )}
                     </div>
