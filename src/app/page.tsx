@@ -442,11 +442,15 @@ export default function Home() {
   };
 
   // Add state for pending zone
-  const [, setPendingZone] = useState<number | null>(null);
+  const [pendingZone, setPendingZone] = useState<number | null>(null);
+
+  // Add state for which button is loading
+  const [loadingButtonId, setLoadingButtonId] = useState<number | null>(null);
 
   // Update fetchFFLogsData to not clear fflogsData or set loading immediately
   const fetchFFLogsData = async (id: number) => {
     setPendingZone(id);
+    setLoadingButtonId(id);
     setError(null);
     setLastApiUrl(null);
     setRawApiResponse(null);
@@ -463,16 +467,19 @@ export default function Home() {
       } catch {
         setError('API did not return valid JSON.');
         setPendingZone(null);
+        setLoadingButtonId(null);
         return;
       }
       setFflogsData(data);
       setActiveZone(id); // Only swap after data is loaded
       setPendingZone(null);
+      setLoadingButtonId(null);
     } catch (err: unknown) {
       setError(typeof err === 'object' && err !== null && 'message' in err 
         ? String((err as unknown as { message: string }).message)
         : 'An error occurred');
       setPendingZone(null);
+      setLoadingButtonId(null);
     }
   };
 
@@ -726,16 +733,9 @@ export default function Home() {
               <div className="relative">
                 <button
                   onClick={() => {
+                    setUltimateExpanded(false);
+                    setSavageExpanded(true);
                     fetchFFLogsData(savageId);
-                    if (ultimateExpanded) {
-                      setUltimateExpanded(false);
-                      // Wait for the close animation to finish before opening Savage
-                      setTimeout(() => {
-                        if (!savageExpanded) setSavageExpanded(true);
-                      }, 300); // Match the transition duration
-                    } else {
-                      if (!savageExpanded) setSavageExpanded(true);
-                    }
                     if (aboutExpanded) setAboutExpanded(false);
                   }}
                   disabled={loading}
@@ -745,19 +745,30 @@ export default function Home() {
                   style={{ zIndex: 2 }}
                 >
                   Savage
+                  {pendingZone === savageId && (
+                    <span className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 rounded">
+                      <span className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full"></span>
+                    </span>
+                  )}
                 </button>
                 {/* Boss Buttons Drop Down */}
                 <div className={`fade-dropdown absolute top-full left-1/2 transform -translate-x-1/2 ${savageExpanded ? 'opacity-100' : 'opacity-0 fade-out'} bg-gray-800 border border-gray-700 border-t-0 rounded-b-lg shadow-lg mt-[6px] py-[6px] px-[6px]`} style={{ zIndex: savageExpanded ? 10 : 1, pointerEvents: savageExpanded ? 'auto' : 'none' }}>
                   <div className="flex flex-row space-x-1 -mt-[2px]">
                     <button
-                      onClick={() => fetchFFLogsData(boss1Id)}
+                      onClick={() => {
+                        setLoadingButtonId(boss1Id);
+                        fetchFFLogsData(boss1Id);
+                      }}
                       disabled={loading}
                       className={`pt-0.5 pb-1 px-1 text-sm font-semibold text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors border-2 whitespace-nowrap flex-shrink-0 ${
                         activeZone === boss1Id ? 'bg-blue-700 border-blue-300' : 'bg-blue-500 border-transparent'
                       }`}
                     >Boss 1</button>
                     <button
-                      onClick={() => fetchFFLogsData(boss2Id)}
+                      onClick={() => {
+                        setLoadingButtonId(boss2Id);
+                        fetchFFLogsData(boss2Id);
+                      }}
                       disabled={loading}
                       className={`pt-0.5 pb-1 px-1 text-sm font-semibold text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors border-2 whitespace-nowrap flex-shrink-0 ${
                         activeZone === boss2Id ? 'bg-blue-700 border-blue-300' : 'bg-blue-500 border-transparent'
@@ -765,14 +776,20 @@ export default function Home() {
                       data-button-id="boss2"
                     >Boss 2</button>
                     <button
-                      onClick={() => fetchFFLogsData(boss3Id)}
+                      onClick={() => {
+                        setLoadingButtonId(boss3Id);
+                        fetchFFLogsData(boss3Id);
+                      }}
                       disabled={loading}
                       className={`pt-0.5 pb-1 px-1 text-sm font-semibold text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors border-2 whitespace-nowrap flex-shrink-0 ${
                         activeZone === boss3Id ? 'bg-blue-700 border-blue-300' : 'bg-blue-500 border-transparent'
                       }`}
                     >Boss 3</button>
                     <button
-                      onClick={() => fetchFFLogsData(boss4Id)}
+                      onClick={() => {
+                        setLoadingButtonId(boss4Id);
+                        fetchFFLogsData(boss4Id);
+                      }}
                       disabled={loading}
                       className={`pt-0.5 pb-1 px-1 text-sm font-semibold text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors border-2 whitespace-nowrap flex-shrink-0 ${
                         activeZone === boss4Id ? 'bg-blue-700 border-blue-300' : 'bg-blue-500 border-transparent'
@@ -786,16 +803,9 @@ export default function Home() {
               <div className="relative">
                 <button
                   onClick={() => {
+                    setSavageExpanded(false);
+                    setUltimateExpanded(true);
                     fetchFFLogsData(ultimateId);
-                    if (savageExpanded) {
-                      setSavageExpanded(false);
-                      // Wait for the close animation to finish before opening Ultimate
-                      setTimeout(() => {
-                        if (!ultimateExpanded) setUltimateExpanded(true);
-                      }, 300); // Match the transition duration
-                    } else {
-                      if (!ultimateExpanded) setUltimateExpanded(true);
-                    }
                     if (partyCompositionExpanded) setPartyCompositionExpanded(false);
                     if (aboutExpanded) setAboutExpanded(false);
                   }}
@@ -806,23 +816,43 @@ export default function Home() {
                   style={{ zIndex: 2 }}
                 >
                   Ultimate
+                  {pendingZone === ultimateId && (
+                    <span className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 rounded">
+                      <span className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full"></span>
+                    </span>
+                  )}
                 </button>
                 {/* Phase Buttons Drop Down */}
                 <div className={`fade-dropdown absolute top-full left-1/2 transform -translate-x-1/2 ${ultimateExpanded ? 'opacity-100' : 'opacity-0 fade-out'} bg-gray-800 border border-gray-700 border-t-0 rounded-b-lg shadow-lg mt-[6px] py-[6px] px-[6px]`} style={{ zIndex: ultimateExpanded ? 10 : 1, pointerEvents: ultimateExpanded ? 'auto' : 'none' }}>
                   <div className="flex flex-row space-x-1 -mt-[2px]">
-                    <button onClick={() => fetchFFLogsData(phase1Id)} disabled={loading} className={`pt-0.5 pb-1 px-1 text-sm font-semibold text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors border-2 whitespace-nowrap flex-shrink-0 ${
+                    <button onClick={() => {
+                      setLoadingButtonId(phase1Id);
+                      fetchFFLogsData(phase1Id);
+                    }} disabled={loading} className={`pt-0.5 pb-1 px-1 text-sm font-semibold text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors border-2 whitespace-nowrap flex-shrink-0 ${
                       activeZone === phase1Id ? 'bg-green-700 border-green-300' : 'bg-green-600 border-transparent'
                     }`} data-button-id="phase1">Phase 1</button>
-                    <button onClick={() => fetchFFLogsData(phase2Id)} disabled={loading} className={`pt-0.5 pb-1 px-1 text-sm font-semibold text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors border-2 whitespace-nowrap flex-shrink-0 ${
+                    <button onClick={() => {
+                      setLoadingButtonId(phase2Id);
+                      fetchFFLogsData(phase2Id);
+                    }} disabled={loading} className={`pt-0.5 pb-1 px-1 text-sm font-semibold text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors border-2 whitespace-nowrap flex-shrink-0 ${
                       activeZone === phase2Id ? 'bg-green-700 border-green-300' : 'bg-green-600 border-transparent'
                     }`}>Phase 2</button>
-                    <button onClick={() => fetchFFLogsData(phase3Id)} disabled={loading} className={`pt-0.5 pb-1 px-1 text-sm font-semibold text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors border-2 whitespace-nowrap flex-shrink-0 ${
+                    <button onClick={() => {
+                      setLoadingButtonId(phase3Id);
+                      fetchFFLogsData(phase3Id);
+                    }} disabled={loading} className={`pt-0.5 pb-1 px-1 text-sm font-semibold text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors border-2 whitespace-nowrap flex-shrink-0 ${
                       activeZone === phase3Id ? 'bg-green-700 border-green-300' : 'bg-green-600 border-transparent'
                     }`}>Phase 3</button>
-                    <button onClick={() => fetchFFLogsData(phase4Id)} disabled={loading} className={`pt-0.5 pb-1 px-1 text-sm font-semibold text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors border-2 whitespace-nowrap flex-shrink-0 ${
+                    <button onClick={() => {
+                      setLoadingButtonId(phase4Id);
+                      fetchFFLogsData(phase4Id);
+                    }} disabled={loading} className={`pt-0.5 pb-1 px-1 text-sm font-semibold text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors border-2 whitespace-nowrap flex-shrink-0 ${
                       activeZone === phase4Id ? 'bg-green-700 border-green-300' : 'bg-green-600 border-transparent'
                     }`}>Phase 4</button>
-                    <button onClick={() => fetchFFLogsData(phase5Id)} disabled={loading} className={`pt-0.5 pb-1 px-1 text-sm font-semibold text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors border-2 whitespace-nowrap flex-shrink-0 ${
+                    <button onClick={() => {
+                      setLoadingButtonId(phase5Id);
+                      fetchFFLogsData(phase5Id);
+                    }} disabled={loading} className={`pt-0.5 pb-1 px-1 text-sm font-semibold text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors border-2 whitespace-nowrap flex-shrink-0 ${
                       activeZone === phase5Id ? 'bg-green-700 border-green-300' : 'bg-green-600 border-transparent'
                     }`}>Phase 5</button>
                   </div>
@@ -833,6 +863,7 @@ export default function Home() {
               <div className="relative">
                 <button
                   onClick={() => {
+                    setLoadingButtonId(partyCompositionId);
                     setActiveZone(partyCompositionId);
                     if (!partyCompositionExpanded) setPartyCompositionExpanded(true);
                     if (savageExpanded) setSavageExpanded(false);
@@ -858,6 +889,11 @@ export default function Home() {
                   style={{ zIndex: 2 }}
                 >
                   Party Composition
+                  {pendingZone === partyCompositionId && (
+                    <span className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 rounded">
+                      <span className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full"></span>
+                    </span>
+                  )}
                 </button>
               </div>
             </div>
@@ -1011,25 +1047,50 @@ export default function Home() {
           </h2>
 
           <div className="bg-gray-800 rounded-lg border border-gray-700 p-6 mb-8 relative">
-            <button
-              onClick={() => {
-                setPartyComposition({
-                  melee1: '',
-                  melee2: '',
-                  ranged: '',
-                  caster: '',
-                  tank1: '',
-                  tank2: '',
-                  healer1: '',
-                  healer2: '',
-                });
-                setFreeformParty([]);
-              }}
-              className="absolute top-4 right-4 px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white text-xs rounded shadow focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
-              title="Reset party selection"
-            >
-              Reset
-            </button>
+            <div className="absolute top-4 right-[24px] w-[72px] flex flex-col items-center">
+              <button
+                onClick={() => {
+                  setPartyComposition({
+                    melee1: '',
+                    melee2: '',
+                    ranged: '',
+                    caster: '',
+                    tank1: '',
+                    tank2: '',
+                    healer1: '',
+                    healer2: '',
+                  });
+                  setFreeformParty([]);
+                }}
+                className="w-full px-4 py-2 text-sm font-semibold rounded shadow focus:outline-none focus:ring-2 focus:ring-blue-400 transition bg-gray-700 hover:bg-gray-600 text-white text-center flex items-center justify-center"
+                title="Reset party selection"
+              >
+                Reset
+              </button>
+              <button
+                onClick={() => {
+                  toggleCheckbox('freeform');
+                  setPartyComposition({
+                    melee1: '',
+                    melee2: '',
+                    ranged: '',
+                    caster: '',
+                    tank1: '',
+                    tank2: '',
+                    healer1: '',
+                    healer2: '',
+                  });
+                  setFreeformParty([]);
+                }}
+                className={`w-full mt-1 px-4 py-2 text-sm font-semibold rounded shadow focus:outline-none focus:ring-2 focus:ring-blue-400 transition text-center flex items-center justify-center ${
+                  checkboxSelections.freeform 
+                    ? 'bg-blue-600 text-white border-blue-400' 
+                    : 'bg-gray-700 hover:bg-gray-600 text-white border-transparent'
+                }`}
+              >
+                Freeform
+              </button>
+            </div>
             <div className="text-center mb-6">
               <h3 className="text-lg font-semibold text-gray-200 mb-2">Party Builder</h3>
               <div className="text-sm text-gray-400 mb-4">
@@ -1201,38 +1262,15 @@ export default function Home() {
                         </button>
                         <button 
                           onClick={() => toggleCheckbox('ultimate')}
-                          className={`flex items-center justify-center gap-2 text-gray-200 text-base py-2 px-3 rounded-md transition-colors border-2 whitespace-nowrap ${
+                          className={`flex items-center justify-center gap-2 text-gray-200 text-base py-2 px-3 rounded-md transition-colors border-2 whitespace-nowrap col-span-2 ${
                             checkboxSelections.ultimate 
                               ? 'bg-blue-600 border-blue-400' 
                               : 'bg-gray-600 hover:bg-gray-500 border-transparent hover:border-gray-400'
                           }`}
                         >
                           <span className="text-xs sm:text-sm">
-                            {partyCompositionData[phase1Id]?.zoneName || 'Ultimate'}
+                            {partyCompositionData[phase1Id]?.zoneName || 'Ultimate'} (Ultimate)
                           </span>
-                        </button>
-                        <button 
-                          onClick={() => {
-                            toggleCheckbox('freeform');
-                            setPartyComposition({
-                              melee1: '',
-                              melee2: '',
-                              ranged: '',
-                              caster: '',
-                              tank1: '',
-                              tank2: '',
-                              healer1: '',
-                              healer2: '',
-                            });
-                            setFreeformParty([]);
-                          }}
-                          className={`flex items-center justify-center gap-2 text-gray-200 text-base py-2 px-3 rounded-md transition-colors border-2 whitespace-nowrap ${
-                            checkboxSelections.freeform 
-                              ? 'bg-blue-600 border-blue-400' 
-                              : 'bg-gray-600 hover:bg-gray-500 border-transparent hover:border-gray-400'
-                          }`}
-                        >
-                          <span className="text-xs sm:text-sm">Freeform</span>
                         </button>
                       </div>
                     </div>
