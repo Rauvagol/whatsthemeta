@@ -24,3 +24,11 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+.fade-dropdown {
+  transition-property: opacity;
+  transition-duration: 300ms;
+}
+.fade-dropdown.fade-out {
+  transition-duration: 100ms;
+}

@@ -59,18 +59,18 @@ function isColorLight(hex: string) {
 }
 
 // Utility to abbreviate boss names (e.g., "Firstname Lastname" becomes "F. Lastname")
-function abbreviateBossName(name: string, maxLength: number = 12): string {
-  if (name.length <= maxLength) return name;
+// function abbreviateBossName(name: string, maxLength: number = 12): string {
+//   if (name.length <= maxLength) return name;
   
-  const words = name.trim().split(' ');
-  if (words.length <= 1) return name;
+//   const words = name.trim().split(' ');
+//   if (words.length <= 1) return name;
   
-  const firstWords = words.slice(0, -1).map(word => word.charAt(0) + '.');
-  const lastWord = words[words.length - 1];
+//   const firstWords = words.slice(0, -1).map(word => word.charAt(0) + '.');
+//   const lastWord = words[words.length - 1];
   
-  const abbreviated = [...firstWords, lastWord].join(' ');
-  return abbreviated.length <= maxLength ? abbreviated : name;
-}
+//   const abbreviated = [...firstWords, lastWord].join(' ');
+//   return abbreviated.length <= maxLength ? abbreviated : name;
+//}
 
 // Pie chart component for a group with tooltip
 function GroupPieChart({ jobs }: { jobs: { job: string; count: string }[] }) {
@@ -307,7 +307,7 @@ const SHOW_DEV_JSON = false;
 
 export default function Home() {
   const [fflogsData, setFflogsData] = useState<FFLogsGroupData | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, ] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeZone, setActiveZone] = useState<number | null>(1);
   const [savageExpanded, setSavageExpanded] = useState(true);
@@ -441,33 +441,13 @@ export default function Home() {
     }
   };
 
-  // Helper function to calculate total party damage
-  // const calculatePartyDamage = () => {
-  //   if (!fflogsData) return 0;
-    
-  //   let totalDamage = 0;
-  //   const selectedJobs = Object.values(partyComposition).filter(job => job !== '');
-    
-  //   selectedJobs.forEach(jobName => {
-  //     // Find the job in the groups
-  //     for (const [, jobs] of Object.entries(fflogsData.groups)) {
-  //       const job = jobs.find(j => j.job === jobName);
-  //       if (job) {
-  //         const damage = parseInt(job.score.replace(/,/g, '')) || 0;
-  //         totalDamage += damage;
-  //         break;
-  //       }
-  //     }
-  //   });
-    
-  //   return totalDamage;
-  // };
+  // Add state for pending zone
+  const [, setPendingZone] = useState<number | null>(null);
 
+  // Update fetchFFLogsData to not clear fflogsData or set loading immediately
   const fetchFFLogsData = async (id: number) => {
-    setLoading(true);
+    setPendingZone(id);
     setError(null);
-    setActiveZone(id);
-    setFflogsData(null);
     setLastApiUrl(null);
     setRawApiResponse(null);
     try {
@@ -482,15 +462,17 @@ export default function Home() {
         data = JSON.parse(text);
       } catch {
         setError('API did not return valid JSON.');
+        setPendingZone(null);
         return;
       }
       setFflogsData(data);
+      setActiveZone(id); // Only swap after data is loaded
+      setPendingZone(null);
     } catch (err: unknown) {
       setError(typeof err === 'object' && err !== null && 'message' in err 
         ? String((err as unknown as { message: string }).message)
         : 'An error occurred');
-    } finally {
-      setLoading(false);
+      setPendingZone(null);
     }
   };
 
@@ -739,14 +721,21 @@ export default function Home() {
               </div>
             </div>
             
-            <div className="flex space-x-4 relative min-h-[48px] items-center mt-[2px]">
+            <div className="flex space-x-4 relative min-h-[48px] items-center mt-[2px]" style={{ position: 'relative', zIndex: 2 }}>
               {/* Savage Button and Boss Buttons */}
               <div className="relative">
                 <button
                   onClick={() => {
                     fetchFFLogsData(savageId);
-                    if (!savageExpanded) setSavageExpanded(true);
-                    if (ultimateExpanded) setUltimateExpanded(false);
+                    if (ultimateExpanded) {
+                      setUltimateExpanded(false);
+                      // Wait for the close animation to finish before opening Savage
+                      setTimeout(() => {
+                        if (!savageExpanded) setSavageExpanded(true);
+                      }, 300); // Match the transition duration
+                    } else {
+                      if (!savageExpanded) setSavageExpanded(true);
+                    }
                     if (aboutExpanded) setAboutExpanded(false);
                   }}
                   disabled={loading}
@@ -758,7 +747,7 @@ export default function Home() {
                   Savage
                 </button>
                 {/* Boss Buttons Drop Down */}
-                <div className={`absolute top-full left-1/2 transform -translate-x-1/2 transition-all duration-300 ${savageExpanded ? 'opacity-100 visible translate-y-0' : 'opacity-0 invisible -translate-y-4'} bg-gray-800 border border-gray-700 border-t-0 rounded-b-lg shadow-lg mt-[6px] py-[6px] px-[6px]`}>
+                <div className={`fade-dropdown absolute top-full left-1/2 transform -translate-x-1/2 ${savageExpanded ? 'opacity-100' : 'opacity-0 fade-out'} bg-gray-800 border border-gray-700 border-t-0 rounded-b-lg shadow-lg mt-[6px] py-[6px] px-[6px]`} style={{ zIndex: savageExpanded ? 10 : 1, pointerEvents: savageExpanded ? 'auto' : 'none' }}>
                   <div className="flex flex-row space-x-1 -mt-[2px]">
                     <button
                       onClick={() => fetchFFLogsData(boss1Id)}
@@ -773,6 +762,7 @@ export default function Home() {
                       className={`pt-0.5 pb-1 px-1 text-sm font-semibold text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors border-2 whitespace-nowrap flex-shrink-0 ${
                         activeZone === boss2Id ? 'bg-blue-700 border-blue-300' : 'bg-blue-500 border-transparent'
                       }`}
+                      data-button-id="boss2"
                     >Boss 2</button>
                     <button
                       onClick={() => fetchFFLogsData(boss3Id)}
@@ -797,8 +787,15 @@ export default function Home() {
                 <button
                   onClick={() => {
                     fetchFFLogsData(ultimateId);
-                    if (!ultimateExpanded) setUltimateExpanded(true);
-                    if (savageExpanded) setSavageExpanded(false);
+                    if (savageExpanded) {
+                      setSavageExpanded(false);
+                      // Wait for the close animation to finish before opening Ultimate
+                      setTimeout(() => {
+                        if (!ultimateExpanded) setUltimateExpanded(true);
+                      }, 300); // Match the transition duration
+                    } else {
+                      if (!ultimateExpanded) setUltimateExpanded(true);
+                    }
                     if (partyCompositionExpanded) setPartyCompositionExpanded(false);
                     if (aboutExpanded) setAboutExpanded(false);
                   }}
@@ -811,11 +808,11 @@ export default function Home() {
                   Ultimate
                 </button>
                 {/* Phase Buttons Drop Down */}
-                <div className={`absolute top-full left-1/2 transform -translate-x-1/2 transition-all duration-300 ${ultimateExpanded ? 'opacity-100 visible translate-y-0' : 'opacity-0 invisible -translate-y-4'} bg-gray-800 border border-gray-700 border-t-0 rounded-b-lg shadow-lg mt-[6px] py-[6px] px-[6px]`}>
+                <div className={`fade-dropdown absolute top-full left-1/2 transform -translate-x-1/2 ${ultimateExpanded ? 'opacity-100' : 'opacity-0 fade-out'} bg-gray-800 border border-gray-700 border-t-0 rounded-b-lg shadow-lg mt-[6px] py-[6px] px-[6px]`} style={{ zIndex: ultimateExpanded ? 10 : 1, pointerEvents: ultimateExpanded ? 'auto' : 'none' }}>
                   <div className="flex flex-row space-x-1 -mt-[2px]">
                     <button onClick={() => fetchFFLogsData(phase1Id)} disabled={loading} className={`pt-0.5 pb-1 px-1 text-sm font-semibold text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors border-2 whitespace-nowrap flex-shrink-0 ${
                       activeZone === phase1Id ? 'bg-green-700 border-green-300' : 'bg-green-600 border-transparent'
-                    }`}>Phase 1</button>
+                    }`} data-button-id="phase1">Phase 1</button>
                     <button onClick={() => fetchFFLogsData(phase2Id)} disabled={loading} className={`pt-0.5 pb-1 px-1 text-sm font-semibold text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors border-2 whitespace-nowrap flex-shrink-0 ${
                       activeZone === phase2Id ? 'bg-green-700 border-green-300' : 'bg-green-600 border-transparent'
                     }`}>Phase 2</button>
@@ -893,7 +890,7 @@ export default function Home() {
           <div>
             <h2 className="text-2xl font-bold mb-6 text-center text-white">
               {activeZone && [boss1Id, boss2Id, boss3Id, boss4Id, phase1Id, phase2Id, phase3Id, phase4Id, phase5Id].includes(activeZone) && fflogsData.bossName
-                ? fflogsData.bossName.replace(/^.*?:\s*/, '')
+                ? fflogsData.bossName.replace(/^.*?-\s*/, '')
                 : fflogsData.zoneName || getZoneName(fflogsData.zone)}
             </h2>
             {Object.entries(fflogsData.groups).map(([group, jobs]) => {
@@ -1163,7 +1160,7 @@ export default function Home() {
                           }`}
                         >
                           <span className="text-xs sm:text-sm">
-                            {partyCompositionData[boss1Id]?.bossName || 'Boss 1'}
+                            {partyCompositionData[boss1Id]?.bossName?.replace(/^.*?-\s*/, '') || 'Boss 1'}
                           </span>
                         </button>
                         <button 
@@ -1175,7 +1172,7 @@ export default function Home() {
                           }`}
                         >
                           <span className="text-xs sm:text-sm">
-                            {partyCompositionData[boss2Id]?.bossName || 'Boss 2'}
+                            {partyCompositionData[boss2Id]?.bossName?.replace(/^.*?-\s*/, '') || 'Boss 2'}
                           </span>
                         </button>
                         <button 
@@ -1187,7 +1184,7 @@ export default function Home() {
                           }`}
                         >
                           <span className="text-xs sm:text-sm">
-                            {partyCompositionData[boss3Id]?.bossName || 'Boss 3'}
+                            {partyCompositionData[boss3Id]?.bossName?.replace(/^.*?-\s*/, '') || 'Boss 3'}
                           </span>
                         </button>
                         <button 
@@ -1199,7 +1196,7 @@ export default function Home() {
                           }`}
                         >
                           <span className="text-xs sm:text-sm">
-                            {partyCompositionData[boss4Id]?.bossName || 'Boss 4'}
+                            {partyCompositionData[boss4Id]?.bossName?.replace(/^.*?-\s*/, '') || 'Boss 4'}
                           </span>
                         </button>
                         <button 
@@ -1254,10 +1251,20 @@ export default function Home() {
           </div>
 
           <div className="space-y-6">
-            {[boss1Id, boss2Id, boss3Id, boss4Id, phase1Id, phase2Id, phase3Id, phase4Id, phase5Id].map((id) => {
+            {[boss1Id, boss2Id, boss3Id, boss4Id, phase1Id, phase2Id, phase3Id, phase4Id, phase5Id]
+              .filter((id) => {
+                // Show boss elements only if their specific checkbox is selected
+                if (id === boss1Id) return checkboxSelections.boss1;
+                if (id === boss2Id) return checkboxSelections.boss2;
+                if (id === boss3Id) return checkboxSelections.boss3;
+                if (id === boss4Id) return checkboxSelections.boss4;
+                // Show phase elements only if Ultimate checkbox is selected
+                else return checkboxSelections.ultimate;
+              })
+              .map((id) => {
               const data = partyCompositionData[id];
               const requirement = getDamageRequirement(id);
-              const bossName = data?.bossName?.replace(/^.*?:\s*/, '') || (id <= 5 ? `Boss ${id}` : `Phase ${id - 6}`);
+              const bossName = data?.bossName?.replace(/^.*?-\s*/, '') || (id <= 5 ? `Boss ${id}` : `Phase ${id - 6}`);
               const zoneName = id <= 5 ? 'Savage' : 'Ultimate';
               
               // Calculate party damage for this specific boss/phase
@@ -1357,9 +1364,12 @@ export default function Home() {
                                   {partyDamage.toLocaleString()} / {requirement.toLocaleString()} DPS
                                 </div>
                               </div>
-                              <div className={`text-xs font-semibold ${partyDamage >= requirement ? 'text-green-400' : 'text-red-400'}`}
+                              <div className="text-xs text-gray-400 text-center"
                                 style={{ minHeight: 20 }}>
-                                {partyDamage >= requirement ? '✓ Meets Requirement' : '✗ Below Requirement'}
+                                {partyDamage >= requirement 
+                                  ? `With this composition, if everyone is playing at an average level, you beat the damage check by ${(percentage - 100).toFixed(1)}% without LB`
+                                  : `With this composition, if everyone is playing at an average level, you miss the damage check by ${(100 - percentage).toFixed(1)}% without LB`
+                                }
                               </div>
                               {/* Damage Warning Button for P3/P5 - only show if freeform mode is off */}
                               {!checkboxSelections.freeform && (showP3WarningIcon || showP5WarningIcon) && (
