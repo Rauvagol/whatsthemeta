@@ -1373,7 +1373,9 @@ export default function Home() {
                                     }
                                   }
                                   return { job: jobName, damage: '0' };
-                                });
+                                })
+                                // Sort by DPS descending
+                                .sort((a, b) => (parseInt(b.damage.replace(/,/g, '')) || 0) - (parseInt(a.damage.replace(/,/g, '')) || 0));
                                 
                                 return (
                                   <ul className="space-y-1">
