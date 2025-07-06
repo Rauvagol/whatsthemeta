@@ -73,13 +73,21 @@ function isColorLight(hex: string) {
 //}
 
 // Pie chart component for a group with tooltip
-function GroupPieChart({ jobs, showPercentages, setShowPercentages }: { jobs: { job: string; count: string }[]; showPercentages: boolean; setShowPercentages: (mode: boolean) => void }) {
+function GroupPieChart({ jobs, showPercentages, setShowPercentages, sortMode, setSortMode }: { jobs: { job: string; count: string; score: string }[]; showPercentages: boolean; setShowPercentages: (mode: boolean) => void; sortMode: 'dps' | 'popularity'; setSortMode: (mode: 'dps' | 'popularity') => void }) {
   const [hovered, setHovered] = useState<number | null>(null);
+  // Sort jobs by selected mode
+  const sortedJobs = [...jobs].sort((a, b) => {
+    if (sortMode === 'popularity') {
+      return (parseInt(b.count.replace(/,/g, '')) || 0) - (parseInt(a.count.replace(/,/g, '')) || 0);
+    } else {
+      return (parseFloat(b.score.replace(/,/g, '')) || 0) - (parseFloat(a.score.replace(/,/g, '')) || 0);
+    }
+  });
   // Calculate total count
-  const total = jobs.reduce((sum, job) => sum + (parseInt(job.count.replace(/,/g, '')) || 0), 0);
+  const total = sortedJobs.reduce((sum, job) => sum + (parseInt(job.count.replace(/,/g, '')) || 0), 0);
   // Calculate angles
   let startAngle = 0;
-  const slices = jobs.map((job, i) => {
+  const slices = sortedJobs.map((job, i) => {
     const count = parseInt(job.count.replace(/,/g, '')) || 0;
     const percent = total > 0 ? count / total : 0;
     const angle = percent * 360;
@@ -109,8 +117,8 @@ function GroupPieChart({ jobs, showPercentages, setShowPercentages }: { jobs: { 
   });
   // Tooltip
   let tooltip = null;
-  if (hovered !== null && jobs[hovered]) {
-    const job = jobs[hovered];
+  if (hovered !== null && sortedJobs[hovered]) {
+    const job = sortedJobs[hovered];
     const count = parseInt(job.count.replace(/,/g, '')) || 0;
     const percent = total > 0 ? ((count / total) * 100).toFixed(1) : '0.0';
     const displayValue = showPercentages ? `${percent}%` : count.toLocaleString();
@@ -135,7 +143,7 @@ function GroupPieChart({ jobs, showPercentages, setShowPercentages }: { jobs: { 
     }
   }, [hovered]);
   return (
-    <div className="flex items-center justify-center w-full">
+    <div className="relative flex items-center justify-center w-full" style={{ minHeight: 120 }}>
       <svg 
         width={100} 
         height={100} 
@@ -147,6 +155,20 @@ function GroupPieChart({ jobs, showPercentages, setShowPercentages }: { jobs: { 
         <circle cx={50} cy={50} r={40} fill="none" stroke="#18181b" strokeWidth="2" />
       </svg>
       {tooltip}
+      <div className="absolute bottom-0 right-0 flex gap-1">
+        <button
+          className={`px-1 py-0.5 text-xs rounded ${sortMode !== 'popularity' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300'}`}
+          onClick={e => { e.stopPropagation(); setSortMode('dps'); }}
+          type="button"
+          style={{ minWidth: 32 }}
+        >DPS</button>
+        <button
+          className={`px-1 py-0.5 text-xs rounded ${sortMode === 'popularity' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300'}`}
+          onClick={e => { e.stopPropagation(); setSortMode('popularity'); }}
+          type="button"
+          style={{ minWidth: 32 }}
+        >Pop.</button>
+      </div>
     </div>
   );
 }
@@ -542,6 +564,9 @@ export default function Home() {
 
   // 1. In the parent component (where you map over groups), add a showPercentages state for each group:
   const [pieChartModes, setPieChartModes] = useState<Record<string, boolean>>({});
+
+  // 2. In the parent component:
+  const [pieChartSortModes, setPieChartSortModes] = useState<Record<string, 'dps' | 'popularity'>>({});
 
   return (
     <div className="min-h-screen bg-zinc-900">
@@ -1040,6 +1065,8 @@ export default function Home() {
                         jobs={jobs} 
                         showPercentages={pieChartModes[group] !== false}
                         setShowPercentages={mode => setPieChartModes(m => ({ ...m, [group]: mode }))}
+                        sortMode={pieChartSortModes[group] || 'dps'}
+                        setSortMode={mode => setPieChartSortModes(m => ({ ...m, [group]: mode }))}
                       />
                     </div>
                   </div>
