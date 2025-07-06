@@ -73,7 +73,7 @@ function isColorLight(hex: string) {
 //}
 
 // Pie chart component for a group with tooltip
-function GroupPieChart({ jobs }: { jobs: { job: string; count: string }[] }) {
+function GroupPieChart({ jobs, showPercentages, setShowPercentages }: { jobs: { job: string; count: string }[]; showPercentages: boolean; setShowPercentages: (mode: boolean) => void }) {
   const [hovered, setHovered] = useState<number | null>(null);
   // Calculate total count
   const total = jobs.reduce((sum, job) => sum + (parseInt(job.count.replace(/,/g, '')) || 0), 0);
@@ -113,12 +113,13 @@ function GroupPieChart({ jobs }: { jobs: { job: string; count: string }[] }) {
     const job = jobs[hovered];
     const count = parseInt(job.count.replace(/,/g, '')) || 0;
     const percent = total > 0 ? ((count / total) * 100).toFixed(1) : '0.0';
+    const displayValue = showPercentages ? `${percent}%` : count.toLocaleString();
     tooltip = (
       <div
         className="fixed z-50 px-3 py-1 rounded bg-zinc-900 text-white text-xs border border-gray-700 pointer-events-none"
         style={{ left: 'calc(var(--mouse-x, 0px) + 20px)', top: 'calc(var(--mouse-y, 0px) - 10px)' }}
       >
-        <span className="font-semibold">{job.job}</span>: {percent}%
+        <span className="font-semibold">{job.job}</span>: {displayValue}
       </div>
     );
   }
@@ -134,8 +135,14 @@ function GroupPieChart({ jobs }: { jobs: { job: string; count: string }[] }) {
     }
   }, [hovered]);
   return (
-    <div className="relative flex items-center justify-center">
-      <svg width={100} height={100} viewBox="0 0 100 100" className="mb-2">
+    <div className="flex items-center justify-center w-full">
+      <svg 
+        width={100} 
+        height={100} 
+        viewBox="0 0 100 100" 
+        className="mb-2 cursor-pointer" 
+        onClick={() => setShowPercentages(!showPercentages)}
+      >
         {slices}
         <circle cx={50} cy={50} r={40} fill="none" stroke="#18181b" strokeWidth="2" />
       </svg>
@@ -532,6 +539,9 @@ export default function Home() {
 
   // Add a flag to hide the damage check feature for phase pages
   // const isPhasePage = activeZone && [phase1Id, phase2Id, phase3Id, phase4Id, phase5Id].includes(activeZone);
+
+  // 1. In the parent component (where you map over groups), add a showPercentages state for each group:
+  const [pieChartModes, setPieChartModes] = useState<Record<string, boolean>>({});
 
   return (
     <div className="min-h-screen bg-zinc-900">
@@ -955,7 +965,9 @@ export default function Home() {
                       <div className="flex-1 text-xs uppercase tracking-wider text-gray-400">{activeZone && [boss1Id, boss2Id, boss3Id, boss4Id].includes(activeZone) ? 'Damage' : 'FFLogs Score'}</div>
                     </div>
                     <div className="flex flex-col items-center justify-end ml-4" style={{ width: 100 }}>
-                      <div className="text-xs uppercase tracking-wider text-gray-400 mb-1">Popularity</div>
+                      <div className="text-xs uppercase tracking-wider text-gray-400 mb-1 text-right w-full whitespace-nowrap">
+                        Popularity {pieChartModes[group] !== false ? '(%)' : '(#)'}
+                      </div>
                     </div>
                   </div>
                   {/* Content Row: Bars | Pie Chart */}
@@ -1023,8 +1035,12 @@ export default function Home() {
                         })}
                       </div>
                     </div>
-                    <div className="flex flex-col items-start ml-4" style={{ width: 100 }}>
-                      <GroupPieChart jobs={jobs} />
+                    <div className="flex items-center justify-center ml-4" style={{ width: 100 }}>
+                      <GroupPieChart 
+                        jobs={jobs} 
+                        showPercentages={pieChartModes[group] !== false}
+                        setShowPercentages={mode => setPieChartModes(m => ({ ...m, [group]: mode }))}
+                      />
                     </div>
                   </div>
                 </div>
