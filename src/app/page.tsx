@@ -155,19 +155,6 @@ function GroupPieChart({ jobs, showPercentages, setShowPercentages, sortMode, se
         <circle cx={50} cy={50} r={40} fill="none" stroke="#18181b" strokeWidth="2" />
       </svg>
       {tooltip}
-      <div className="mt-0.5">
-        <button
-          className="px-2 py-1 text-xs rounded bg-gray-700 text-gray-300 hover:bg-gray-600 transition-colors w-32"
-          onClick={e => { 
-            e.stopPropagation(); 
-            setSortMode(sortMode === 'dps' ? 'popularity' : 'dps'); 
-          }}
-          type="button"
-          title={`Currently sorting by ${sortMode === 'dps' ? 'DPS' : 'Popularity'}. Click to switch.`}
-        >
-          {sortMode === 'dps' ? 'Sorting by DPS' : 'Sorting by popularity'}
-        </button>
-      </div>
     </div>
   );
 }
@@ -989,9 +976,17 @@ export default function Home() {
                       <div className="flex-1 text-xs uppercase tracking-wider text-gray-400">{activeZone && [boss1Id, boss2Id, boss3Id, boss4Id].includes(activeZone) ? 'Damage' : 'FFLogs Score'}</div>
                     </div>
                     <div className="flex flex-col items-center justify-end ml-4" style={{ width: 100 }}>
-                      <div className="text-xs uppercase tracking-wider text-gray-400 mb-1 text-right w-full whitespace-nowrap">
-                        Popularity {pieChartModes[group] !== false ? '(%)' : '(#)'}
-                      </div>
+                      <button
+                        className="px-2 py-1 text-xs rounded bg-gray-700 text-gray-300 hover:bg-gray-600 transition-colors w-42"
+                        onClick={e => { 
+                          e.stopPropagation(); 
+                          setPieChartSortModes(m => ({ ...m, [group]: (pieChartSortModes[group] || 'popularity') === 'dps' ? 'popularity' : 'dps' })); 
+                        }}
+                        type="button"
+                        title={`Currently sorting by ${(pieChartSortModes[group] || 'popularity') === 'dps' ? 'DPS' : 'Popularity'}. Click to switch.`}
+                      >
+                        {(pieChartSortModes[group] || 'popularity') === 'dps' ? `Sorting by DPS ${pieChartModes[group] !== false ? '(% players)' : '(# players)'}` : `Sorting by popularity ${pieChartModes[group] !== false ? '(%)' : '(#)'}`}
+                      </button>
                     </div>
                   </div>
                   {/* Content Row: Bars | Pie Chart */}
@@ -1059,7 +1054,7 @@ export default function Home() {
                         })}
                       </div>
                     </div>
-                    <div className="flex items-center justify-center ml-4" style={{ width: 100 }}>
+                    <div className="flex flex-col items-center justify-center ml-4" style={{ width: 100 }}>
                       <GroupPieChart 
                         jobs={jobs} 
                         showPercentages={pieChartModes[group] !== false}
