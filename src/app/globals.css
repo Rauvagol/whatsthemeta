@@ -32,3 +32,22 @@ body {
 .fade-dropdown.fade-out {
   transition-duration: 100ms;
 }
+
+/* Custom scrollbar for about dropdown */
+.about-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.about-scrollbar::-webkit-scrollbar-track {
+  background: #374151; /* gray-700 */
+  border-radius: 4px;
+}
+
+.about-scrollbar::-webkit-scrollbar-thumb {
+  background: #46608A; /* Same color as selected dropdown boxes */
+  border-radius: 4px;
+}
+
+.about-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #5A7399; /* Slightly lighter version on hover */
+}

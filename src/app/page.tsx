@@ -143,31 +143,30 @@ function GroupPieChart({ jobs, showPercentages, setShowPercentages, sortMode, se
     }
   }, [hovered]);
   return (
-    <div className="relative flex items-center justify-center w-full" style={{ minHeight: 120 }}>
+    <div className="flex flex-col items-center justify-center w-full" style={{ minHeight: 120 }}>
       <svg 
         width={100} 
         height={100} 
         viewBox="0 0 100 100" 
-        className="mb-2 cursor-pointer" 
+        className="cursor-pointer" 
         onClick={() => setShowPercentages(!showPercentages)}
       >
         {slices}
         <circle cx={50} cy={50} r={40} fill="none" stroke="#18181b" strokeWidth="2" />
       </svg>
       {tooltip}
-      <div className="absolute bottom-0 right-0 flex gap-1">
+      <div className="mt-0.5">
         <button
-          className={`px-1 py-0.5 text-xs rounded ${sortMode !== 'popularity' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300'}`}
-          onClick={e => { e.stopPropagation(); setSortMode('dps'); }}
+          className="px-2 py-1 text-xs rounded bg-gray-700 text-gray-300 hover:bg-gray-600 transition-colors w-32"
+          onClick={e => { 
+            e.stopPropagation(); 
+            setSortMode(sortMode === 'dps' ? 'popularity' : 'dps'); 
+          }}
           type="button"
-          style={{ minWidth: 32 }}
-        >DPS</button>
-        <button
-          className={`px-1 py-0.5 text-xs rounded ${sortMode === 'popularity' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300'}`}
-          onClick={e => { e.stopPropagation(); setSortMode('popularity'); }}
-          type="button"
-          style={{ minWidth: 32 }}
-        >Pop.</button>
+          title={`Currently sorting by ${sortMode === 'dps' ? 'DPS' : 'Popularity'}. Click to switch.`}
+        >
+          {sortMode === 'dps' ? 'Sorting by DPS' : 'Sorting by popularity'}
+        </button>
       </div>
     </div>
   );
@@ -593,7 +592,7 @@ export default function Home() {
                   About
                 </button>
                 {/* About Dropdown */}
-                <div className={`absolute top-full left-0 mt-2 w-96 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 transition-all duration-200 ${aboutExpanded ? 'opacity-100 visible' : 'opacity-0 invisible'}`}>
+                <div className={`absolute top-full left-0 mt-2 w-96 max-h-[50vh] bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 transition-all duration-200 overflow-y-auto about-scrollbar ${aboutExpanded ? 'opacity-100 visible' : 'opacity-0 invisible'}`}>
                   <div className="p-4 space-y-2">
                     {/* How to Use */}
                     <div>
@@ -1050,7 +1049,7 @@ export default function Home() {
                                     <div className="fixed z-50 px-3 py-1 rounded bg-zinc-900 text-white text-xs border border-gray-700 pointer-events-none"
                                       style={{ left: 'calc(var(--mouse-x, 0px) + 20px)', top: 'calc(var(--mouse-y, 0px) - 10px)' }}
                                     >
-                                      {`${job.job} is ${percentOfBest.toFixed(1)}% of ${bestJob.job}`}
+                                      {`${job.job} is ${percentOfBest.toFixed(1)}% of ${bestJob.job}'s DPS`}
                                     </div>
                                   )}
                                 </div>
@@ -1065,7 +1064,7 @@ export default function Home() {
                         jobs={jobs} 
                         showPercentages={pieChartModes[group] !== false}
                         setShowPercentages={mode => setPieChartModes(m => ({ ...m, [group]: mode }))}
-                        sortMode={pieChartSortModes[group] || 'dps'}
+                        sortMode={pieChartSortModes[group] || 'popularity'}
                         setSortMode={mode => setPieChartSortModes(m => ({ ...m, [group]: mode }))}
                       />
                     </div>
