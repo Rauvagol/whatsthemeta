@@ -73,7 +73,7 @@ function isColorLight(hex: string) {
 //}
 
 // Pie chart component for a group with tooltip
-function GroupPieChart({ jobs, showPercentages, setShowPercentages, sortMode, setSortMode }: { jobs: { job: string; count: string; score: string }[]; showPercentages: boolean; setShowPercentages: (mode: boolean) => void; sortMode: 'dps' | 'popularity'; setSortMode: (mode: 'dps' | 'popularity') => void }) {
+function GroupPieChart({ jobs, showPercentages, setShowPercentages, sortMode,  }: { jobs: { job: string; count: string; score: string }[]; showPercentages: boolean; setShowPercentages: (mode: boolean) => void; sortMode: 'dps' | 'popularity'; setSortMode: (mode: 'dps' | 'popularity') => void }) {
   const [hovered, setHovered] = useState<number | null>(null);
   // Sort jobs by selected mode
   const sortedJobs = [...jobs].sort((a, b) => {
